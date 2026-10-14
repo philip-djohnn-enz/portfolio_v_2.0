@@ -865,6 +865,19 @@ body {
 /* ==========================================================================
    FLOATING 3D TRANSLUCENT BADGES AROUND ENGINEER
    ========================================================================== */
+.hero-badges-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.hero-badges-wrapper .floating-badge {
+    pointer-events: auto;
+}
+
 .floating-badge {
     position: absolute;
     display: flex;
@@ -2750,7 +2763,7 @@ body {
 }
 
 /* ==========================================================================
-   RESPONSIVE DESIGN BREAKPOINTS
+   RESPONSIVE DESIGN BREAKPOINTS (OPTIMIZED FOR IPHONE 11 & MOBILE SCREENS)
    ========================================================================== */
 @media (max-width: 1024px) {
     .nav-links { display: none; }
@@ -2760,36 +2773,385 @@ body {
     .sim-grid { grid-template-columns: 1fr; }
     .edu-refs-grid { grid-template-columns: 1fr; }
     .contact-terminal-grid { grid-template-columns: 1fr; }
-    .floating-badge { padding: 10px 14px; }
-    .badge-top-left { left: 0px; top: 10px; }
-    .badge-top-right { right: 0px; top: 20px; }
-    .badge-mid-left { left: 0px; bottom: 80px; }
-    .badge-bottom-right { right: 0px; bottom: 60px; }
 }
 
 @media (max-width: 768px) {
-    .hero-stage { height: 440px; }
-    .cutout-frame { width: 300px; height: 420px; }
-    .floating-badge {
-        position: static;
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        position: relative !important;
+    }
+
+    .hero-section {
+        padding-top: 100px;
+        padding-bottom: 50px;
+        min-height: auto;
+        overflow-x: hidden;
         width: 100%;
-        margin-bottom: 10px;
+        max-width: 100vw;
     }
-    .badge-top-left,
-    .badge-top-right,
-    .badge-mid-left,
-    .badge-bottom-right {
-        position: relative;
-        left: 0; right: 0; top: 0; bottom: 0;
+
+    /* Kinetic Typography on Mobile */
+    .kinetic-typography-layer {
+        top: 250px;
+        width: 100%;
+        max-width: 100vw;
+        overflow: hidden;
     }
-    .hero-metrics-ribbon {
+
+    .kinetic-text {
+        font-size: clamp(2.2rem, 9.8vw, 3.4rem) !important;
+        letter-spacing: -0.02em !important;
+        max-width: 96vw;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+
+    .kinetic-sub-text {
+        font-size: 0.65rem;
+        letter-spacing: 0.25em;
+    }
+
+    /* Rings scaled down on Mobile */
+    .blueprint-rings {
+        top: 250px;
+        width: 320px;
+        height: 320px;
+        max-width: 90vw;
+    }
+    .ring-outer { width: 310px; height: 310px; }
+    .ring-mid { width: 230px; height: 230px; }
+    .ring-inner { width: 160px; height: 160px; }
+
+    /* Center Stage on Mobile */
+    .hero-stage {
+        width: 100%;
+        max-width: 100vw;
+        height: auto;
+        min-height: unset;
+        display: flex;
         flex-direction: column;
-        gap: 16px;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 24px;
+        perspective: none;
+        overflow: visible;
     }
-    .metric-divider {
+
+    .subject-wrapper {
         width: 100%;
-        height: 1px;
+        max-width: 330px;
+        height: 380px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        position: relative;
+        margin: 0 auto;
+        transform: none !important;
     }
-    .form-row { grid-template-columns: 1fr; }
-    .calc-results-grid { grid-template-columns: 1fr; }
+
+    .cutout-frame {
+        width: min(280px, 80vw);
+        height: 380px;
+    }
+
+    .subject-cutout {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+    }
+
+    .robot-img-wrapper {
+        width: min(250px, 72vw);
+        height: 350px;
+        margin: 0 auto;
+    }
+
+    .subject-glow-backdrop {
+        width: 280px;
+        height: 300px;
+    }
+
+    .dual-role-switch-wrap {
+        bottom: -24px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .dual-role-btn {
+        padding: 6px 14px;
+        font-size: 0.7rem;
+    }
+
+    /* MOBILE 2X2 RESPONSIVE BADGES GRID (PERFECT FIT INSIDE IPHONE SCREEN) */
+    .hero-badges-wrapper {
+        position: relative !important;
+        inset: auto !important;
+        width: 100% !important;
+        max-width: 390px !important;
+        margin: 44px auto 0 auto !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 0 12px !important;
+        z-index: 25 !important;
+        pointer-events: auto !important;
+    }
+
+    .floating-badge {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        transform: none !important;
+        animation: none !important;
+        padding: 8px 10px !important;
+        border-radius: 12px !important;
+        gap: 8px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+        background: rgba(13, 19, 34, 0.88) !important;
+    }
+
+    .floating-badge:hover {
+        transform: translateY(-2px) !important;
+    }
+
+    .badge-icon {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.95rem !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .badge-content {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .badge-title {
+        font-size: 0.72rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .badge-desc {
+        font-size: 0.6rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* Hero Foreground Content on Mobile */
+    .hero-foreground-content {
+        padding: 0 16px !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+        margin-top: 15px !important;
+    }
+
+    .hero-status-pill {
+        font-size: 0.65rem !important;
+        padding: 5px 12px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .hero-headline {
+        font-size: clamp(1.65rem, 6.8vw, 2.3rem) !important;
+        margin-bottom: 12px !important;
+    }
+
+    .hero-bio {
+        font-size: 0.88rem !important;
+        line-height: 1.6 !important;
+        margin-bottom: 22px !important;
+    }
+
+    .hero-cta-group {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 340px !important;
+        gap: 10px !important;
+        margin-bottom: 30px !important;
+    }
+
+    .btn-cyan, .btn-amber, .btn-glass {
+        width: 100% !important;
+        padding: 12px 18px !important;
+        font-size: 0.88rem !important;
+    }
+
+    .hero-metrics-ribbon {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        padding: 14px 12px !important;
+        width: 100% !important;
+        max-width: 360px !important;
+    }
+
+    .metric-divider {
+        display: none !important;
+    }
+
+    .metric-value {
+        font-size: 1.4rem !important;
+    }
+
+    .metric-label {
+        font-size: 0.65rem !important;
+    }
+
+    /* Glass Navigation Bar on Mobile */
+    .glass-nav-wrapper {
+        padding: 0 12px !important;
+        top: 10px !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    .glass-nav {
+        height: 56px !important;
+        padding: 0 12px !important;
+        border-radius: 14px !important;
+    }
+
+    .logo-mark {
+        width: 34px !important;
+        height: 34px !important;
+    }
+
+    .logo-text .name {
+        font-size: 0.85rem !important;
+    }
+
+    .logo-text .role {
+        font-size: 0.58rem !important;
+    }
+
+    /* Bottom HUD Bar on Mobile */
+    .hud-quick-bar {
+        left: 12px !important;
+        bottom: 12px !important;
+        gap: 8px !important;
+    }
+
+    .hud-badge {
+        display: none !important; /* Hide long system status badge on small screens */
+    }
+
+    .hud-btn {
+        padding: 6px 12px !important;
+        font-size: 0.68rem !important;
+    }
+
+    /* Section padding on Mobile */
+    .content-section {
+        padding: 70px 16px !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    .section-title {
+        font-size: 1.8rem !important;
+    }
+
+    .section-subtitle {
+        font-size: 0.88rem !important;
+    }
+
+    /* Projects Grid on Mobile */
+    .projects-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+
+    .project-card {
+        width: 100% !important;
+    }
+
+    .project-card-links {
+        flex-direction: column !important;
+    }
+
+    .btn-card-link {
+        width: 100% !important;
+    }
+
+    /* Experience Timeline on Mobile */
+    .experience-timeline {
+        padding-left: 20px !important;
+    }
+
+    .experience-timeline::before {
+        left: 5px !important;
+    }
+
+    .timeline-dot {
+        left: -20px !important;
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .timeline-card {
+        padding: 20px 16px !important;
+    }
+
+    .timeline-role {
+        font-size: 1.15rem !important;
+    }
+
+    /* Form & Simulator grids on Mobile */
+    .form-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .calc-results-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Modal Dialog on Mobile */
+    .modal-container {
+        padding: 24px 16px !important;
+        max-height: 92vh !important;
+    }
+
+    .modal-title {
+        font-size: 1.35rem !important;
+    }
+
+    .modal-specs-table th,
+    .modal-specs-table td {
+        padding: 8px 10px !important;
+        font-size: 0.8rem !important;
+    }
+}
+
+@media (max-width: 380px) {
+    /* Very compact screens (iPhone SE / older models) */
+    .hero-badges-wrapper {
+        grid-template-columns: 1fr !important;
+    }
+
+    .cutout-frame {
+        width: 250px !important;
+        height: 350px !important;
+    }
+
+    .robot-img-wrapper {
+        width: 230px !important;
+        height: 320px !important;
+    }
 }

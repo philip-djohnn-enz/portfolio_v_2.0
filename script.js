@@ -144,6 +144,15 @@ function initHeroParallax() {
     });
 
     function updateParallax() {
+        if (window.innerWidth <= 768) {
+            if (subject) subject.style.transform = '';
+            badges.forEach(badge => {
+                badge.style.transform = '';
+            });
+            requestAnimationFrame(updateParallax);
+            return;
+        }
+
         currentX += (mouseX - currentX) * 0.08;
         currentY += (mouseY - currentY) * 0.08;
 
