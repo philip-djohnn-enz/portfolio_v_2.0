@@ -2825,25 +2825,26 @@ body {
     .ring-mid { width: 230px; height: 230px; }
     .ring-inner { width: 160px; height: 160px; }
 
-    /* Center Stage on Mobile */
+    /* Center Stage on Mobile - Photo is Dead Centered */
     .hero-stage {
         width: 100%;
         max-width: 100vw;
         height: auto;
-        min-height: unset;
+        min-height: 480px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
         margin-bottom: 24px;
         perspective: none;
         overflow: visible;
+        position: relative;
     }
 
     .subject-wrapper {
         width: 100%;
-        max-width: 330px;
-        height: 380px;
+        max-width: min(390px, 96vw);
+        height: 440px;
         display: flex;
         justify-content: center;
         align-items: flex-end;
@@ -2853,32 +2854,37 @@ body {
     }
 
     .cutout-frame {
-        width: min(280px, 80vw);
-        height: 380px;
+        width: min(290px, 80vw);
+        height: 420px;
+        position: relative;
+        margin: 0 auto;
     }
 
     .subject-cutout {
         max-height: 100%;
         max-width: 100%;
+        width: auto;
         object-fit: contain;
     }
 
     .robot-img-wrapper {
-        width: min(250px, 72vw);
-        height: 350px;
+        width: min(270px, 75vw);
+        height: 390px;
         margin: 0 auto;
     }
 
     .subject-glow-backdrop {
         width: 280px;
-        height: 300px;
+        height: 320px;
     }
 
     .dual-role-switch-wrap {
-        bottom: -24px;
-        width: 100%;
-        display: flex;
-        justify-content: center;
+        position: absolute !important;
+        bottom: -16px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 30 !important;
+        width: max-content !important;
     }
 
     .dual-role-btn {
@@ -2886,47 +2892,78 @@ body {
         font-size: 0.7rem;
     }
 
-    /* MOBILE 2X2 RESPONSIVE BADGES GRID (PERFECT FIT INSIDE IPHONE SCREEN) */
+    .role-badge-tag {
+        position: absolute !important;
+        top: 12px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        bottom: auto !important;
+        padding: 4px 12px !important;
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+        z-index: 15 !important;
+    }
+
+    /* FLOATING BADGES OVERLAY (ABSOLUTE OVER PHOTO - DOES NOT PUSH IMAGE) */
     .hero-badges-wrapper {
-        position: relative !important;
-        inset: auto !important;
+        position: absolute !important;
+        inset: 0 !important;
         width: 100% !important;
-        max-width: 390px !important;
-        margin: 44px auto 0 auto !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-        padding: 0 12px !important;
+        height: 100% !important;
+        pointer-events: none !important;
         z-index: 25 !important;
-        pointer-events: auto !important;
     }
 
     .floating-badge {
-        position: relative !important;
-        top: auto !important;
-        left: auto !important;
-        right: auto !important;
-        bottom: auto !important;
-        width: 100% !important;
-        margin: 0 !important;
-        transform: none !important;
-        animation: none !important;
-        padding: 8px 10px !important;
+        position: absolute !important;
+        width: auto !important;
+        max-width: 165px !important;
+        padding: 6px 10px !important;
         border-radius: 12px !important;
-        gap: 8px !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
-        background: rgba(13, 19, 34, 0.88) !important;
+        gap: 7px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65) !important;
+        background: rgba(11, 17, 32, 0.82) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        pointer-events: auto !important;
+        animation: none !important;
+        transform: none !important;
     }
 
-    .floating-badge:hover {
-        transform: translateY(-2px) !important;
+    .badge-top-left {
+        top: 25px !important;
+        left: 4px !important;
+        right: auto !important;
+        bottom: auto !important;
+    }
+
+    .badge-top-right {
+        top: 60px !important;
+        right: 4px !important;
+        left: auto !important;
+        bottom: auto !important;
+    }
+
+    .badge-mid-left {
+        bottom: 65px !important;
+        left: 4px !important;
+        right: auto !important;
+        top: auto !important;
+    }
+
+    .badge-bottom-right {
+        bottom: 45px !important;
+        right: 4px !important;
+        left: auto !important;
+        top: auto !important;
     }
 
     .badge-icon {
-        width: 28px !important;
-        height: 28px !important;
-        font-size: 0.95rem !important;
-        border-radius: 8px !important;
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 0.88rem !important;
+        border-radius: 7px !important;
         flex-shrink: 0 !important;
     }
 
@@ -2936,16 +2973,19 @@ body {
     }
 
     .badge-title {
-        font-size: 0.72rem !important;
-        line-height: 1.2 !important;
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+        color: #fff !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
 
     .badge-desc {
-        font-size: 0.6rem !important;
-        line-height: 1.2 !important;
+        font-size: 0.58rem !important;
+        line-height: 1.15 !important;
+        color: var(--text-secondary) !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -3140,18 +3180,33 @@ body {
 }
 
 @media (max-width: 380px) {
-    /* Very compact screens (iPhone SE / older models) */
-    .hero-badges-wrapper {
-        grid-template-columns: 1fr !important;
+    /* Very compact screens (iPhone SE / older compact phones) */
+    .floating-badge {
+        max-width: 140px !important;
+        padding: 5px 8px !important;
+    }
+
+    .badge-icon {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.78rem !important;
+    }
+
+    .badge-title {
+        font-size: 0.62rem !important;
+    }
+
+    .badge-desc {
+        font-size: 0.52rem !important;
     }
 
     .cutout-frame {
         width: 250px !important;
-        height: 350px !important;
+        height: 360px !important;
     }
 
     .robot-img-wrapper {
         width: 230px !important;
-        height: 320px !important;
+        height: 330px !important;
     }
 }
