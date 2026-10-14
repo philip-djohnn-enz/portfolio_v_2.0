@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHORN PHILIP | Electrical & MEP Engineer | Robotics & Automation</title>
+    <meta name="description" content="High-end engineering portfolio of Chorn Philip - Electrical Engineer, MEP Specialist, and Robotics Developer based in Phnom Penh, Cambodia.">
+    <!-- Favicon / Browser Tab Icon -->
+    <link rel="icon" type="image/png" href="ph logo.png">   
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark text-slate-100 selection:bg-cyan-500 selection:text-black">
+
+    <!-- Interactive Ambient Grid & Circuit Canvas -->
+    <canvas id="blueprint-canvas" class="fixed-canvas" aria-hidden="true"></canvas>
+
+    <!-- Cursor Glow Spotlight -->
+    <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
+
+    <!-- Audio FX Toggle & HUD Bar -->
+    <div class="hud-quick-bar">
+        <button id="audio-toggle" class="hud-btn" title="Toggle High-Tech Audio FX">
+            <span class="hud-icon">🔊</span>
+            <span class="hud-label">SFX: <span id="audio-status">ON</span></span>
+        </button>
+        <div class="hud-badge">
+            <span class="pulse-dot"></span>
+            <span>SYSTEM STATUS: OPTIMAL</span>
+        </div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="glass-nav-wrapper">
+        <nav class="glass-nav">
+            <!-- Brand Logo -->
+            <a href="#home" class="brand-logo">
+                <div class="logo-mark">
+                    <img src="ph logo.png" alt="PH Logo" class="logo-img">
+                    <span class="logo-pulse"></span>
+                </div>
+                <div class="logo-text">
+                    <span class="name">CHORN PHILIP</span>
+                    <span class="role">ELECTRICAL &bull; MEP &bull; ROBOTICS</span>
+                </div>
+            </a>
+
+            <!-- Desktop Links -->
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active"><span class="nav-num">01.</span> Home</a></li>
+                <li><a href="#experience" class="nav-link"><span class="nav-num">02.</span> Experience</a></li>
+                <li><a href="#projects" class="nav-link"><span class="nav-num">03.</span> Projects</a></li>
+                <li><a href="#skills" class="nav-link"><span class="nav-num">04.</span> Skills</a></li>
+                <li><a href="#lab" class="nav-link"><span class="nav-num">05.</span> Tech Lab</a></li>
+                <li><a href="#contact" class="nav-link"><span class="nav-num">06.</span> Contact</a></li>
+            </ul>
+
+            <!-- Navigation Actions -->
+            <div class="nav-actions">
+                <a href="CHORN_PHILIP_CV_NEW.pdf" target="_blank" download="CHORN_PHILIP_CV_NEW.pdf" class="btn-nav-cv">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    <span>Get CV</span>
+                </a>
+                <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Drawer Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+        <ul class="mobile-links">
+            <li><a href="#home" class="mob-link">01. Home</a></li>
+            <li><a href="#experience" class="mob-link">02. Experience</a></li>
+            <li><a href="#projects" class="mob-link">03. Projects</a></li>
+            <li><a href="#skills" class="mob-link">04. Skills</a></li>
+            <li><a href="#lab" class="mob-link">05. Tech Lab</a></li>
+            <li><a href="#contact" class="mob-link">06. Contact</a></li>
+        </ul>
+        <div class="mobile-actions">
+            <a href="CHORN_PHILIP_CV_NEW.pdf" target="_blank" class="btn-cyan w-full text-center">Download Official CV (PDF)</a>
+            <a href="CHORN_PHILIP_RESUME.pdf" target="_blank" class="btn-amber w-full text-center mt-3">Download Resume (PDF)</a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- ============================================== -->
+        <!-- 01. HERO SECTION WITH 3D DEPTH & CUTOUT       -->
+        <!-- ============================================== -->
+        <section id="home" class="hero-section">
+            <!-- Massive Kinetic Typography Behind Subject -->
+            <div class="kinetic-typography-layer" aria-hidden="true">
+                <div class="kinetic-text kinetic-row-1" data-speed="1.2">CHORN PHILIP</div>
+                <div class="kinetic-sub-text">ELECTRICAL &bull; MEP &bull; ROBOTICS</div>
+                <div class="kinetic-text kinetic-row-2" data-speed="0.8">CHORN PHILIP</div>
+            </div>
+
+            <!-- Hero Blueprint Ambient Rings -->
+            <div class="blueprint-rings" aria-hidden="true">
+                <div class="ring ring-outer"></div>
+                <div class="ring ring-mid"></div>
+                <div class="ring ring-inner"></div>
+                <div class="compass-crosshair"></div>
+            </div>
+
+            <!-- Subject & Floating Badges Stage -->
+            <div class="hero-stage">
+                <!-- Center Subject Container -->
+                <div class="subject-wrapper" id="subject-parallax">
+                    <!-- Subtle Glow Aura behind cutout -->
+                    <div class="subject-glow-backdrop"></div>
+                    <div class="hologram-scanline"></div>
+
+                    <!-- 3D Dual-Specialty Cutout (MEP Specialist ⇄ Robotics & PCB Engineer) -->
+                    <div class="cutout-frame">
+                        <div class="cutout-flipper" id="cutout-flipper" onclick="toggleHeroFlip(event)" title="Click to flip between MEP and Robotics specialty">
+                            <!-- Side A: MEP Engineer Cutout -->
+                            <div class="cutout-face cutout-front">
+                                <img src="Asian male engineer.png" alt="Chorn Philip - Electrical & MEP Engineer" class="subject-cutout" id="engineer-img">
+                                <div class="role-badge-tag tag-cyan">
+                                    <span class="role-icon">⚡</span>
+                                    <span>MEP &amp; HVAC SPECIALIST</span>
+                                </div>
+                                <div class="cutout-base-fade"></div>
+                            </div>
+
+                            <!-- Side B: Robotics & Automation Engineer (Welding PCB) -->
+                            <div class="cutout-face cutout-back">
+                                <div class="robot-img-wrapper">
+                                    <div class="robot-corner-hud">LAB // PCB-WELD</div>
+                                    <img src="ph robot.png" alt="Chorn Philip - Robotics & Automation Engineer" class="subject-cutout robot-cutout" id="robot-img">
+                                    <div class="robot-glow-edge"></div>
+                                </div>
+                                <div class="role-badge-tag tag-amber">
+                                    <span class="role-icon">🤖</span>
+                                    <span>ROBOTICS &amp; PCB FIRMWARE</span>
+                                </div>
+                                <div class="cutout-base-fade"></div>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Switch Button -->
+                        <div class="dual-role-switch-wrap">
+                            <button type="button" class="dual-role-btn" id="dual-role-btn" onclick="toggleHeroFlip(event)">
+                                <span class="switch-icon">🔄</span>
+                                <span class="switch-label">SPECIALTY:</span>
+                                <span class="active-role-text" id="active-role-text">MEP &amp; HVAC ENGINEER</span>
+                                <span class="switch-hint">(FLIP)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Floating 3D Translucent Badges around Subject -->
+                    <!-- Badge 1: 1st Place Robotics -->
+                    <div class="floating-badge badge-top-left" data-depth="40">
+                        <div class="badge-icon badge-icon-gold">🏆</div>
+                        <div class="badge-content">
+                            <span class="badge-title">1st Place Champion</span>
+                            <span class="badge-desc">Line Follower Robotics 2026</span>
+                        </div>
+                        <div class="badge-corner-bracket"></div>
+                    </div>
+
+                    <!-- Badge 2: MEP & HVAC Specialist -->
+                    <div class="floating-badge badge-top-right" data-depth="35">
+                        <div class="badge-icon badge-icon-cyan">⚡</div>
+                        <div class="badge-content">
+                            <span class="badge-title">MEP & HVAC Specialist</span>
+                            <span class="badge-desc">B&MEP Engineering Construction</span>
+                        </div>
+                        <div class="badge-corner-bracket"></div>
+                    </div>
+
+                    <!-- Badge 3: Embedded & Quadruped -->
+                    <div class="floating-badge badge-mid-left" data-depth="50">
+                        <div class="badge-icon badge-icon-amber">🤖</div>
+                        <div class="badge-content">
+                            <span class="badge-title">Quadruped AI & Drone</span>
+                            <span class="badge-desc">STM32 Firmware & Gait Kinematics</span>
+                        </div>
+                    </div>
+
+                    <!-- Badge 4: Dual-Degree Scholar -->
+                    <div class="floating-badge badge-bottom-right" data-depth="45">
+                        <div class="badge-icon badge-icon-purple">🎓</div>
+                        <div class="badge-content">
+                            <span class="badge-title">ECAM LaSalle &bull; ITC</span>
+                            <span class="badge-desc">4th Year Honors &bull; Phnom Penh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Intro HUD & Call to Action (Foreground) -->
+            <div class="hero-foreground-content">
+                <div class="hero-status-pill">
+                    <span class="beacon-dot"></span>
+                    <span>ACTIVE ON-SITE & FIRMWARE DEPLOYMENT</span>
+                </div>
+
+                <h1 class="hero-headline">
+                    PRECISION <span class="text-glow-cyan">MEP SYSTEMS</span><br>
+                    &amp; ADVANCED <span class="text-glow-amber">ROBOTICS</span>
+                </h1>
+
+                <p class="hero-bio">
+                    <strong>Chorn Philip</strong> — 4th-Year Electrical Engineering Scholar at <strong>Institute of Technology of Cambodia (ITC)</strong> enrolled in the prestigious <strong>ECAM LaSalle International Dual-Degree Program</strong>. Practicing MEP Technician at <strong>B&MEP Engineering Construction Co.</strong>, specializing in HVAC blueprints, industrial electrical distribution, STM32 firmware, and autonomous robotics.
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="hero-cta-group">
+                    <a href="#projects" class="btn-cyan">
+                        <span class="btn-icon">⚡</span>
+                        <span>Explore Field Projects</span>
+                    </a>
+                    <a href="#experience" class="btn-amber">
+                        <span class="btn-icon">📐</span>
+                        <span>MEP & Site Experience</span>
+                    </a>
+                    <a href="CHORN_PHILIP_CV_NEW.pdf" target="_blank" class="btn-glass">
+                        <span class="btn-icon">📄</span>
+                        <span>View Verified CV</span>
+                    </a>
+                </div>
+
+                <!-- Live Engineering Metrics Ribbon -->
+                <div class="hero-metrics-ribbon">
+                    <div class="metric-card">
+                        <div class="metric-value text-glow-cyan">1st</div>
+                        <div class="metric-label">Robotics Competition Winner</div>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-card">
+                        <div class="metric-value text-glow-amber">4th Year</div>
+                        <div class="metric-label">ECAM LaSalle / ITC Dual Degree</div>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-card">
+                        <div class="metric-value text-glow-cyan">100%</div>
+                        <div class="metric-label">AutoCAD & BOQ Accuracy</div>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-card">
+                        <div class="metric-value text-glow-amber">IELTS 6.0</div>
+                        <div class="metric-label">Advanced English Certified</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scroll Indicator -->
+            <a href="#experience" class="scroll-down-indicator" aria-label="Scroll to experience">
+                <span class="mouse-icon">
+                    <span class="mouse-wheel"></span>
+                </span>
+                <span class="scroll-text">SYSTEM EXPLORATION</span>
+            </a>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 02. PROFESSIONAL EXPERIENCE SECTION           -->
+        <!-- ============================================== -->
+        <section id="experience" class="content-section">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> FIELD OPERATIONS &amp; INDUSTRY TRACK <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        ENGINEERING <span class="text-glow-cyan">EXPERIENCE</span>
+                    </h2>
+                    <p class="section-subtitle">
+                        Rigorous industry employment in Mechanical, Electrical &amp; Plumbing alongside dual-degree international engineering studies.
+                    </p>
+                </div>
+
+                <div class="experience-timeline">
+                    <!-- Experience 1: B&MEP -->
+                    <div class="timeline-item timeline-featured">
+                        <div class="timeline-dot">
+                            <span class="dot-inner"></span>
+                        </div>
+                        <div class="timeline-card glass-panel" data-tilt>
+                            <div class="card-glow-edge"></div>
+                            <div class="timeline-meta">
+                                <span class="timeline-badge badge-active">ACTIVE INDUSTRY ROLE</span>
+                                <span class="timeline-period">2025 – Present</span>
+                            </div>
+                            <h3 class="timeline-role">MEP Technician – HVAC &amp; Electrical Installation</h3>
+                            <div class="timeline-company">
+                                <span class="company-name">B&MEP Engineering Construction Co., Ltd</span>
+                                <span class="company-loc">&bull; Phnom Penh, Cambodia</span>
+                            </div>
+                            <p class="timeline-desc">
+                                Spearheading hands-on mechanical, electrical, and plumbing engineering execution across active commercial building construction sites.
+                            </p>
+                            <ul class="timeline-responsibilities">
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span><strong>HVAC & MEP Systems Deployment:</strong> Support the installation, troubleshooting, and balancing of commercial HVAC systems, fresh air ducts, chilled water circuits, and low-voltage distribution panels.</span>
+                                </li>
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span><strong>Blueprint & Schematic Interpretation:</strong> Read and interpret multi-layer MEP architectural drawings, single-line diagrams (SLD), and engineering specifications to direct on-site installation teams.</span>
+                                </li>
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span><strong>Drafting & Site Reference Plans:</strong> Produce accurate draft plans for MEP layout routes, conduit runs, and installation references to prevent site clashes.</span>
+                                </li>
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span><strong>Bills of Quantities (BOQ) & Reporting:</strong> Formulate comprehensive Bills of Quantities (BOQ), material estimation sheets, and progress milestone reports for project managers.</span>
+                                </li>
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span><strong>Multi-Disciplinary Coordination:</strong> Bridge communication between main contractors, site engineers, architectural teams, and specialized subcontractors.</span>
+                                </li>
+                            </ul>
+                            <div class="card-tech-chips">
+                                <span class="tech-chip">AutoCAD MEP</span>
+                                <span class="tech-chip">HVAC Chillers & VRV</span>
+                                <span class="tech-chip">Single Line Diagrams</span>
+                                <span class="tech-chip">BOQ & Costing</span>
+                                <span class="tech-chip">Site Supervision</span>
+                                <span class="tech-chip">DIALux evo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience 2: Computer Teacher -->
+                    <div class="timeline-item">
+                        <div class="timeline-dot">
+                            <span class="dot-inner"></span>
+                        </div>
+                        <div class="timeline-card glass-panel" data-tilt>
+                            <div class="timeline-meta">
+                                <span class="timeline-badge badge-past">ACADEMIC INSTRUCTION</span>
+                                <span class="timeline-period">2022 – 2023</span>
+                            </div>
+                            <h3 class="timeline-role">Software Instructor</h3>
+                            <div class="timeline-company">
+                                <span class="company-name">Prek Pras Sab High School</span>
+                                <span class="company-loc">&bull; Cambodia</span>
+                            </div>
+                            <p class="timeline-desc">
+                                Instructed secondary school students in foundational and intermediate computing, software suites, and digital graphic design.
+                            </p>
+                            <ul class="timeline-responsibilities">
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span>Delivered structured curriculum covering Microsoft Word, Excel (data calculations), PowerPoint, Adobe Illustrator, and Photoshop.</span>
+                                </li>
+                                <li>
+                                    <span class="bullet-arrow">▹</span>
+                                    <span>Adapted complex technical and computing workflows into intuitive modular lessons for learners of varying technological backgrounds.</span>
+                                </li>
+                            </ul>
+                            <div class="card-tech-chips">
+                                <span class="tech-chip">Office Suite</span>
+                                <span class="tech-chip">Adobe Photoshop</span>
+                                <span class="tech-chip">Illustrator</span>
+                                <span class="tech-chip">Technical Communication</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience 3: Volunteer -->
+                    <div class="timeline-item">
+                        <div class="timeline-dot">
+                            <span class="dot-inner"></span>
+                        </div>
+                        <div class="timeline-card glass-panel" data-tilt>
+                            <div class="timeline-meta">
+                                <span class="timeline-badge badge-past">COMMUNITY LEADERSHIP</span>
+                                <span class="timeline-period">2020 – 2024</span>
+                            </div>
+                            <h3 class="timeline-role">Youth Ambassador &amp; Humanitarian Volunteer</h3>
+                            <div class="timeline-company">
+                                <span class="company-name">Cambodian Red Cross &amp; UYFN (United Youth for National Development)</span>
+                            </div>
+                            <p class="timeline-desc">
+                                Participated in nationwide social outreach, disaster preparedness initiatives, community welfare, and youth leadership training.
+                            </p>
+                            <div class="card-tech-chips">
+                                <span class="tech-chip">Cross-Functional Leadership</span>
+                                <span class="tech-chip">Community Engagement</span>
+                                <span class="tech-chip">Crisis Management</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 03. ENGINEERING & ROBOTICS PROJECTS SECTION   -->
+        <!-- ============================================== -->
+        <section id="projects" class="content-section bg-alt-dark">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> REAL-WORLD ENGINEERING PORTFOLIO <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        FEATURED <span class="text-glow-amber">PROJECTS</span> &amp; INNOVATIONS
+                    </h2>
+                    <p class="section-subtitle">
+                        From building MEP electrical systems to engineering 4-legged robots, autonomous spray drones, and championship line-followers.
+                    </p>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="project-filters">
+                    <button class="filter-btn active" data-filter="all">All Systems</button>
+                    <button class="filter-btn" data-filter="mep">MEP &amp; HVAC</button>
+                    <button class="filter-btn" data-filter="robotics">Robotics &amp; AI</button>
+                    <button class="filter-btn" data-filter="embedded">Drones &amp; Firmware</button>
+                </div>
+
+                <!-- Projects Grid -->
+                <div class="projects-grid">
+                    <!-- Project 1: On-Site MEP & HVAC Infrastructure -->
+                    <div class="project-card glass-panel" data-category="mep" data-project-id="mep-hvac">
+                        <div class="project-visual">
+                            <div class="schematic-preview mep-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">DWG // MEP-2025-C1</div>
+                                <div class="visual-circuit-lines">
+                                    <div class="duct-line"></div>
+                                    <div class="pipe-line"></div>
+                                    <div class="conduit-pulse"></div>
+                                </div>
+                                <div class="schematic-icon">🏢</div>
+                            </div>
+                            <div class="project-badge-float badge-cyan">ON-SITE MEP INSPECTION</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-01 &bull; COMMERCIAL MEP</span>
+                                <span class="project-year">2025 – Present</span>
+                            </div>
+                            <h3 class="project-name">Commercial HVAC &amp; MEP Infrastructure Deployment</h3>
+                            <p class="project-summary">
+                                Full-scope on-site engineering for commercial mechanical, electrical, and plumbing infrastructure. Includes draft plan generation, electrical single-line distribution, BOQ preparation, and air ducting balancing.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">Application:</span> Multi-Story Commercial & Residential</div>
+                                <div class="spec-item"><span class="spec-k">Key Tooling:</span> AutoCAD, DIALux evo, Single Line Diagrams</div>
+                                <div class="spec-item"><span class="spec-k">Deliverable:</span> BOQ, Clash-Free Drafts, As-Built Specs</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('mep-hvac')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1jRVgnTwe4oBzhM4AXFsTUW9eRj5opsep?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open In-Site HVAC Installation Drive">
+                                        <span>📁 In-Site Drive</span>
+                                    </a>
+                                    <a href="https://drive.google.com/drive/folders/1Iauf2hc7H5q5cCbdn31uX2edqLvJHxO3?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open In-Office Design & BOQ Drive">
+                                        <span>📐 In-Office Drive</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 2: Precision Agricultural Spraying Drone -->
+                    <div class="project-card glass-panel" data-category="embedded" data-project-id="drone">
+                        <div class="project-visual">
+                            <div class="schematic-preview drone-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">Drone // AGRI-SPRAY-V2</div>
+                                <div class="visual-radar-ring"></div>
+                                <div class="schematic-icon">🚁</div>
+                            </div>
+                            <div class="project-badge-float badge-amber">PRECISION AGRI-TECH</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-02 &bull; AUTONOMOUS UAV</span>
+                                <span class="project-year">2025 – 2026</span>
+                            </div>
+                            <h3 class="project-name">Autonomous Agricultural Spraying &amp; Crop Drone</h3>
+                            <p class="project-summary">
+                                Designed and engineered an autonomous F450 quadcopter drone for automated precision spraying and crop monitoring, integrating Pixhawk autopilot, SunnySky motors, and automated pump spraying.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">Payload:</span> Micro Water Pump &amp; Precision Liquid Spray Nozzle</div>
+                                <div class="spec-item"><span class="spec-k">Propulsion:</span> SunnySky Brushless Motors + 30A ESCs</div>
+                                <div class="spec-item"><span class="spec-k">Autopilot:</span> Pixhawk GPS Navigation &amp; ExpressLRS</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('drone')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1SXOPA0mHIRif5qI7VDVZ5DIcDdlCe4ZN?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open Drone Project Google Drive">
+                                        <span>📁 UAV Project Drive</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 3: Voice-Interactive Quadruped Robot -->
+                    <div class="project-card glass-panel" data-category="robotics" data-project-id="quadruped">
+                        <div class="project-visual">
+                            <div class="schematic-preview quadruped-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">ROBO // QUAD-8DOF</div>
+                                <div class="visual-wave-lines">
+                                    <span></span><span></span><span></span><span></span><span></span>
+                                </div>
+                                <div class="schematic-icon">🤖</div>
+                            </div>
+                            <div class="project-badge-float badge-cyan">8-DOF BIOMIMETIC</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-03 &bull; ROBOTICS & AI</span>
+                                <span class="project-year">2025 – 2026</span>
+                            </div>
+                            <h3 class="project-name">Voice-Interactive Quadruped (4-Legged) Walking Robot</h3>
+                            <p class="project-summary">
+                                Engineered an 8-DOF biomimetic walking robot featuring coordinated inverse kinematics leg gait control and an integrated natural voice recognition module that responds in real-time.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">Actuation:</span> 8 High-Torque Servos (2 per limb gait)</div>
+                                <div class="spec-item"><span class="spec-k">Processing:</span> Microcontroller + Speech Synthesis Unit</div>
+                                <div class="spec-item"><span class="spec-k">Capabilities:</span> Trot gait, omni-directional walking, voice I/O</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('quadruped')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1LS8MxVf53c4X_F-wFqlXthylPBTje6_q?usp=drive_link" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open Quadruped Google Drive">
+                                        <span>📁 Project Drive</span>
+                                    </a>
+                                    <a href="https://web.facebook.com/share/v/1ddWdMBkCm/" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-video" title="Watch Quadruped Testing Video Part 1">
+                                        <span>▶️ Video Part 1</span>
+                                    </a>
+                                    <a href="https://web.facebook.com/share/v/19NV1ZCP3j/" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-video" title="Watch Quadruped Testing Video Part 2">
+                                        <span>▶️ Video Part 2</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 4: 1st Place Line Follower Robot -->
+                    <div class="project-card glass-panel" data-category="robotics" data-project-id="linefollower">
+                        <div class="project-visual">
+                            <div class="schematic-preview line-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">ITC // 1ST-CHAMPION-2026</div>
+                                <div class="visual-track-indicator">
+                                    <div class="track-path"></div>
+                                    <div class="sensor-beacon"></div>
+                                </div>
+                                <div class="schematic-icon">🥇</div>
+                            </div>
+                            <div class="project-badge-float badge-gold">1ST PLACE WINNER</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-04 &bull; AUTONOMOUS MOBILITY</span>
+                                <span class="project-year">2025 – 2026</span>
+                            </div>
+                            <h3 class="project-name">Championship Autonomous Line Follower</h3>
+                            <p class="project-summary">
+                                Awarded <strong>1st Place</strong> in the Line Follower Robot Competition. Designed custom KiCad PCB with 5-channel IR array and calibrated high-frequency PID steering loops for 900 RPM micro motors.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">Award:</span> 🏆 1st Place Champion (ITC Competition)</div>
+                                <div class="spec-item"><span class="spec-k">Control:</span> Calibrated PID Loop + Intersection Logic</div>
+                                <div class="spec-item"><span class="spec-k">Hardware:</span> Custom KiCad PCB + 900 RPM Micro Motors</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('linefollower')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1AfE8Use7veXtqmIMWOBtyBM0xQOPRKwj?usp=drive_link" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open Line Follower Robot Google Drive">
+                                        <span>📁 Robot Drive</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 5: DIALux evo Lighting Simulation -->
+                    <div class="project-card glass-panel" data-category="mep" data-project-id="dialux">
+                        <div class="project-visual">
+                            <div class="schematic-preview dialux-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">CAD // DIALUX-LUX-ISO</div>
+                                <div class="visual-lux-contour"></div>
+                                <div class="schematic-icon">💡</div>
+                            </div>
+                            <div class="project-badge-float badge-cyan">PHOTOMETRIC SIMULATION</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-05 &bull; ELECTRICAL LIGHTING</span>
+                                <span class="project-year">2025</span>
+                            </div>
+                            <h3 class="project-name">Smart Architectural &amp; Industrial Lighting Simulation</h3>
+                            <p class="project-summary">
+                                Comprehensive illumination engineering and photometric simulation using DIALux evo. Calculated glare ratings (UGR), average lux levels, and energy efficiency profiles conforming to EN 12464 standards.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">Software:</span> DIALux evo &amp; AutoCAD Architecture</div>
+                                <div class="spec-item"><span class="spec-k">Outputs:</span> 3D False-Color Lux Maps &amp; Luminaire BOQ</div>
+                                <div class="spec-item"><span class="spec-k">Efficiency:</span> Optimized energy density (W/m²) per floor</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('dialux')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1Iauf2hc7H5q5cCbdn31uX2edqLvJHxO3?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open Lighting Engineering Google Drive">
+                                        <span>📁 Project Drive</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 6: LTspice & KiCad Embedded Circuitry -->
+                    <div class="project-card glass-panel" data-category="embedded" data-project-id="pcb">
+                        <div class="project-visual">
+                            <div class="schematic-preview pcb-schematic">
+                                <div class="blueprint-grid-overlay"></div>
+                                <div class="mep-hud-tag">EDA // KICAD-CIRCUIT-REV3</div>
+                                <div class="visual-pcb-traces"></div>
+                                <div class="schematic-icon">⚡</div>
+                            </div>
+                            <div class="project-badge-float badge-amber">PCB &amp; SIMULATION</div>
+                        </div>
+                        <div class="project-body">
+                            <div class="project-header">
+                                <span class="project-code">SYS-06 &bull; HARDWARE EDA</span>
+                                <span class="project-year">2024 – 2026</span>
+                            </div>
+                            <h3 class="project-name">Custom Sensor Integration &amp; Motor Driver Modules</h3>
+                            <p class="project-summary">
+                                Schematic capture and PCB layout in KiCad paired with analog circuit simulation in LTspice. Features transient power surge suppression, optical isolation, and H-bridge motor driver routing for robotics and industrial controllers.
+                            </p>
+                            <div class="project-specs-list">
+                                <div class="spec-item"><span class="spec-k">EDA Tools:</span> KiCad, LTspice, STM32CubeIDE</div>
+                                <div class="spec-item"><span class="spec-k">Circuits:</span> Opto-isolated gate drivers, LDO regulators</div>
+                                <div class="spec-item"><span class="spec-k">Testing:</span> Digital Oscilloscope &amp; Logic Analyzer verified</div>
+                            </div>
+                            <div class="project-footer">
+                                <button class="btn-project-modal" onclick="openProjectModal('pcb')">
+                                    <span>Examine Technical Specs</span>
+                                    <svg class="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </button>
+                                <div class="project-card-links">
+                                    <a href="https://drive.google.com/drive/folders/1AfE8Use7veXtqmIMWOBtyBM0xQOPRKwj?usp=drive_link" target="_blank" rel="noopener noreferrer" class="btn-card-link btn-drive" title="Open Hardware & Circuit Google Drive">
+                                        <span>📁 Project Drive</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 04. TECHNICAL SKILLS & DOMAIN MATRIX          -->
+        <!-- ============================================== -->
+        <section id="skills" class="content-section">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> ENGINEERING PROFICIENCIES <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        TECHNICAL <span class="text-glow-cyan">SKILLS</span> &amp; SOFTWARE ARSENAL
+                    </h2>
+                    <p class="section-subtitle">
+                        Cross-disciplinary synergy of electrical building systems, embedded firmware, and computational modeling.
+                    </p>
+                </div>
+
+                <!-- Bento Grid Skills Layout -->
+                <div class="skills-bento-grid">
+                    <!-- Column 1: MEP & Electrical Building Systems -->
+                    <div class="skill-category-card glass-panel" data-tilt>
+                        <div class="category-header">
+                            <div class="cat-icon-wrap cat-cyan">📐</div>
+                            <div>
+                                <h3 class="cat-title">MEP &amp; Electrical Engineering</h3>
+                                <p class="cat-sub">Building services, load calculations &amp; site execution</p>
+                            </div>
+                        </div>
+                        <div class="skill-meter-group">
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">HVAC &amp; Mechanical Systems Installation</span>
+                                    <span class="skill-val text-glow-cyan">92%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar cyan-bar" style="width: 92%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">MEP Draft Plan &amp; Blueprint Drafting</span>
+                                    <span class="skill-val text-glow-cyan">95%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar cyan-bar" style="width: 95%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Single Line Diagrams (SLD) &amp; Distribution</span>
+                                    <span class="skill-val text-glow-cyan">88%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar cyan-bar" style="width: 88%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Bills of Quantities (BOQ) &amp; Material Lists</span>
+                                    <span class="skill-val text-glow-cyan">90%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar cyan-bar" style="width: 90%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Photometric Lighting (DIALux evo)</span>
+                                    <span class="skill-val text-glow-cyan">86%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar cyan-bar" style="width: 86%;"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Robotics & Embedded Systems -->
+                    <div class="skill-category-card glass-panel" data-tilt>
+                        <div class="category-header">
+                            <div class="cat-icon-wrap cat-amber">🤖</div>
+                            <div>
+                                <h3 class="cat-title">Robotics &amp; Embedded Systems</h3>
+                                <p class="cat-sub">Firmware, PID control, circuit prototyping &amp; sensors</p>
+                            </div>
+                        </div>
+                        <div class="skill-meter-group">
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">PID Control Loops &amp; Algorithm Tuning</span>
+                                    <span class="skill-val text-glow-amber">94%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar amber-bar" style="width: 94%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Microcontroller Firmware (STM32 / Arduino)</span>
+                                    <span class="skill-val text-glow-amber">90%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar amber-bar" style="width: 90%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Circuit Design &amp; Troubleshooting (KiCad / LTspice)</span>
+                                    <span class="skill-val text-glow-amber">87%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar amber-bar" style="width: 87%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Multi-Sensor Integration &amp; Telemetry</span>
+                                    <span class="skill-val text-glow-amber">89%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar amber-bar" style="width: 89%;"></div></div>
+                            </div>
+                            <div class="skill-meter">
+                                <div class="meter-labels">
+                                    <span class="skill-name">Robotics Kinematics &amp; Walking Gaits</span>
+                                    <span class="skill-val text-glow-amber">85%</span>
+                                </div>
+                                <div class="meter-track"><div class="meter-bar amber-bar" style="width: 85%;"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Software & CAD Tools Badge Grid -->
+                    <div class="skill-category-card glass-panel span-2-col" data-tilt>
+                        <div class="category-header">
+                            <div class="cat-icon-wrap cat-cyan">💻</div>
+                            <div>
+                                <h3 class="cat-title">Software, CAD &amp; Computational Suites</h3>
+                                <p class="cat-sub">Industry-standard design, simulation and project management tools</p>
+                            </div>
+                        </div>
+                        <div class="tools-grid">
+                            <div class="tool-item">
+                                <div class="tool-icon">📐</div>
+                                <div class="tool-name">AutoCAD</div>
+                                <div class="tool-level">MEP Draft &amp; Architectural</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">💡</div>
+                                <div class="tool-name">DIALux evo</div>
+                                <div class="tool-level">3D Photometrics</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">⚡</div>
+                                <div class="tool-name">KiCad EDA</div>
+                                <div class="tool-level">Schematic &amp; 2-Layer PCB</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">📈</div>
+                                <div class="tool-name">LTspice</div>
+                                <div class="tool-level">Transient &amp; AC Analysis</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">🔬</div>
+                                <div class="tool-name">MATLAB / Simulink</div>
+                                <div class="tool-level">Control Systems &amp; Math</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">⚙️</div>
+                                <div class="tool-name">STM32CubeIDE</div>
+                                <div class="tool-level">ARM Cortex-M Firmware</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">🔌</div>
+                                <div class="tool-name">Arduino IDE</div>
+                                <div class="tool-level">Rapid Prototyping</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">📊</div>
+                                <div class="tool-name">MS Project</div>
+                                <div class="tool-level">Gantt &amp; Milestones</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">🎨</div>
+                                <div class="tool-name">Photoshop / Illustrator</div>
+                                <div class="tool-level">Graphics &amp; Schematics</div>
+                            </div>
+                            <div class="tool-item">
+                                <div class="tool-icon">📑</div>
+                                <div class="tool-name">Office Suite (Excel)</div>
+                                <div class="tool-level">BOQ &amp; Cost Analysis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 05. INTERACTIVE ENGINEERING TECH LAB           -->
+        <!-- ============================================== -->
+        <section id="lab" class="content-section bg-alt-dark">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> LIVE SIMULATION BENCH <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        INTERACTIVE <span class="text-glow-cyan">TECH LAB</span>
+                    </h2>
+                    <p class="section-subtitle">
+                        Test interactive engineering calculations and simulations in real-time.
+                    </p>
+                </div>
+
+                <!-- Simulation Widget Container -->
+                <div class="lab-widget glass-panel">
+                    <div class="lab-top-hud">
+                        <div class="hud-term-dots">
+                            <span class="t-dot red"></span>
+                            <span class="t-dot yellow"></span>
+                            <span class="t-dot green"></span>
+                        </div>
+                        <div class="lab-hud-title">CHORN_PHILIP // ENGINEERING_SIMULATOR_V4.2</div>
+                        <div class="lab-mode-tabs">
+                            <button class="lab-tab active" data-sim="mep">MEP HVAC Load &amp; Airflow</button>
+                            <button class="lab-tab" data-sim="pid">PID Robotics Loop</button>
+                            <button class="lab-tab" data-sim="lux">DIALux Lux Estimator</button>
+                        </div>
+                    </div>
+
+                    <!-- Simulator 1: MEP HVAC Airflow & Cooling Load -->
+                    <div class="sim-pane active" id="sim-mep">
+                        <div class="sim-grid">
+                            <div class="sim-controls">
+                                <h4 class="sim-h4">Room &amp; HVAC Parameters</h4>
+                                <div class="sim-input-group">
+                                    <label>Floor Area (m²): <span id="val-area" class="text-glow-cyan">60</span></label>
+                                    <input type="range" id="input-area" min="15" max="250" value="60" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Ceiling Height (m): <span id="val-height" class="text-glow-cyan">3.2</span></label>
+                                    <input type="range" id="input-height" min="2.4" max="6.0" step="0.1" value="3.2" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Occupant Density (Persons): <span id="val-occupants" class="text-glow-cyan">8</span></label>
+                                    <input type="range" id="input-occupants" min="1" max="40" value="8" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Space Type:</label>
+                                    <select id="input-spacetype" class="sim-select">
+                                        <option value="office">Commercial Office (Medium Heat Load)</option>
+                                        <option value="server">Server / Electrical Switchroom (High Heat)</option>
+                                        <option value="residential">Residential Suite (Low-Medium Heat)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="sim-display">
+                                <h4 class="sim-h4">Calculated MEP Deliverables</h4>
+                                <div class="calc-results-grid">
+                                    <div class="calc-box">
+                                        <span class="calc-label">Total Room Volume</span>
+                                        <span class="calc-num" id="out-volume">192.0 m³</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Estimated Cooling Load</span>
+                                        <span class="calc-num text-glow-cyan" id="out-btu">34,560 BTU/h</span>
+                                        <span class="calc-sub" id="out-tons">(2.88 Tons / 10.13 kW)</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Required Airflow Rate</span>
+                                        <span class="calc-num text-glow-amber" id="out-cfm">864 CFM</span>
+                                        <span class="calc-sub" id="out-m3h">(1,468 m³/h)</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Recommended Duct Diameter</span>
+                                        <span class="calc-num" id="out-duct">Ø 300 mm (12 in)</span>
+                                    </div>
+                                </div>
+                                <div class="schematic-mini-preview">
+                                    <div class="airflow-animation" id="airflow-anim">
+                                        <div class="air-particle p1"></div>
+                                        <div class="air-particle p2"></div>
+                                        <div class="air-particle p3"></div>
+                                        <span class="duct-status">⚡ CHILLED AIRFLOW: ACTIVE DRAFT</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulator 2: PID Robotics Loop Simulator -->
+                    <div class="sim-pane" id="sim-pid">
+                        <div class="sim-grid">
+                            <div class="sim-controls">
+                                <h4 class="sim-h4">PID Algorithm Gain Constants</h4>
+                                <div class="sim-input-group">
+                                    <label>Kp (Proportional Gain): <span id="val-kp" class="text-glow-amber">2.8</span></label>
+                                    <input type="range" id="input-kp" min="0.1" max="6.0" step="0.1" value="2.8" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Ki (Integral Gain): <span id="val-ki" class="text-glow-amber">0.4</span></label>
+                                    <input type="range" id="input-ki" min="0.0" max="2.0" step="0.05" value="0.4" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Kd (Derivative Gain): <span id="val-kd" class="text-glow-amber">1.2</span></label>
+                                    <input type="range" id="input-kd" min="0.0" max="4.0" step="0.1" value="1.2" class="sim-slider">
+                                </div>
+                                <button class="btn-cyan mt-3 w-full" id="btn-run-pid">Simulate Step Response</button>
+                            </div>
+                            <div class="sim-display">
+                                <h4 class="sim-h4">Step Response &amp; Convergence Curve</h4>
+                                <canvas id="pid-canvas" width="480" height="200" class="pid-graph-canvas"></canvas>
+                                <div class="pid-stats">
+                                    <div>Rise Time: <span id="pid-rise" class="text-glow-cyan">0.14s</span></div>
+                                    <div>Overshoot: <span id="pid-overshoot" class="text-glow-amber">6.4%</span></div>
+                                    <div>Steady Error: <span id="pid-error" class="text-glow-cyan">0.00 mm</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulator 3: DIALux Lux Photometrics -->
+                    <div class="sim-pane" id="sim-lux">
+                        <div class="sim-grid">
+                            <div class="sim-controls">
+                                <h4 class="sim-h4">Room Illumination Setup</h4>
+                                <div class="sim-input-group">
+                                    <label>Application Standard:</label>
+                                    <select id="input-standard" class="sim-select">
+                                        <option value="500">Commercial Office / CAD Drafting (500 Lux)</option>
+                                        <option value="300">Technical Classroom / Workshop (300 Lux)</option>
+                                        <option value="750">Electronics &amp; PCB Assembly (750 Lux)</option>
+                                        <option value="150">Corridors &amp; Mechanical Rooms (150 Lux)</option>
+                                    </select>
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Room Dimensions (L x W): <span id="val-roomdim" class="text-glow-cyan">10m x 8m</span></label>
+                                    <input type="range" id="input-roomlen" min="4" max="20" value="10" class="sim-slider">
+                                </div>
+                                <div class="sim-input-group">
+                                    <label>Luminaire Type: <span class="text-glow-cyan">LED Panel 40W (4,200 lm)</span></label>
+                                </div>
+                            </div>
+                            <div class="sim-display">
+                                <h4 class="sim-h4">Photometric DIALux Assessment</h4>
+                                <div class="calc-results-grid">
+                                    <div class="calc-box">
+                                        <span class="calc-label">Required Target Lux</span>
+                                        <span class="calc-num text-glow-cyan" id="out-targetlux">500 lx</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Total Luminaires Needed</span>
+                                        <span class="calc-num text-glow-amber" id="out-fixtures">16 Fixtures</span>
+                                        <span class="calc-sub" id="out-grid">Grid Layout: 4 x 4</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Installed Power Density</span>
+                                        <span class="calc-num" id="out-power">8.0 W/m²</span>
+                                        <span class="calc-sub">High Energy Efficiency (A+)</span>
+                                    </div>
+                                    <div class="calc-box">
+                                        <span class="calc-label">Glare Rating (UGR)</span>
+                                        <span class="calc-num text-glow-cyan">&lt; 19 (Compliant)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 06. EDUCATION, CREDENTIALS & REFERENCES       -->
+        <!-- ============================================== -->
+        <section id="education" class="content-section">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> SCHOLARSHIP &amp; VERIFICATION <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        ACADEMIC <span class="text-glow-cyan">FOUNDATION</span> &amp; REFERENCES
+                    </h2>
+                    <p class="section-subtitle">
+                        Rigorous dual-degree engineering program and distinguished academic faculty endorsements.
+                    </p>
+                </div>
+
+                <div class="edu-refs-grid">
+                    <!-- Left: Education Journey -->
+                    <div class="edu-column">
+                        <div class="edu-card glass-panel" data-tilt>
+                            <div class="edu-year-tag">2023 – Present &bull; 4th Year Ongoing</div>
+                            <h3 class="edu-degree">Bachelor of Electrical Engineering</h3>
+                            <div class="edu-school">
+                                <span class="school-name">ECAM LaSalle International Program &bull; Institute of Technology of Cambodia (ITC)</span>
+                            </div>
+                            <p class="edu-details">
+                                Specialization Track in <strong>Robotics and Automation</strong>. Comprehensive training encompassing microcontroller firmware, high-voltage &amp; building MEP distribution design, PID control algorithms, industrial control systems, and automated machinery.
+                            </p>
+                            <div class="badge-row">
+                                <span class="micro-badge">ECAM LaSalle Dual-Degree</span>
+                                <span class="micro-badge">Robotics &amp; Automation</span>
+                                <span class="micro-badge">ITC Scholar</span>
+                            </div>
+                        </div>
+
+                        <div class="edu-card glass-panel" data-tilt>
+                            <div class="edu-year-tag">2023 – 2025</div>
+                            <h3 class="edu-degree">General English Program &amp; Diploma in Creative &amp; Critical Thinking</h3>
+                            <div class="edu-school">
+                                <span class="school-name">ACE (Australian Centre for Education)</span>
+                            </div>
+                            <p class="edu-details">
+                                Advanced multi-disciplinary diploma focusing on structured analytical reasoning, debate, complex problem formulation, and academic English communication.
+                            </p>
+                            <div class="badge-row">
+                                <span class="micro-badge">IELTS Band 6.0</span>
+                                <span class="micro-badge">Critical Thinking</span>
+                            </div>
+                        </div>
+
+                        <div class="edu-card glass-panel" data-tilt>
+                            <div class="edu-year-tag">2011 – 2023</div>
+                            <h3 class="edu-degree">Baccalaureate II (High School National Diploma)</h3>
+                            <div class="edu-school">
+                                <span class="school-name">Prek Pras Sab High School</span>
+                            </div>
+                            <p class="edu-details">
+                                Completed general secondary education with strong emphasis in mathematics, physics, and natural sciences, establishing the foundational bedrock for university engineering.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Verified Academic References & Honors -->
+                    <div class="refs-column">
+                        <div class="honors-card glass-panel">
+                            <h3 class="box-subhead">🏆 Awards &amp; Honors</h3>
+                            <div class="award-item">
+                                <div class="award-badge-icon">🥇</div>
+                                <div>
+                                    <div class="award-name">1st Place, Line Follower Robot Competition</div>
+                                    <div class="award-meta">Institute of Technology of Cambodia (ITC) &bull; 2025 / 2026</div>
+                                    <p class="award-sub">Recognized for top lap velocity, flawless sensor fidelity, and custom PID algorithmic stability.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="references-container glass-panel">
+                            <h3 class="box-subhead">📋 Verified Academic References</h3>
+                            
+                            <!-- Ref 1 -->
+                            <div class="ref-profile">
+                                <div class="ref-avatar">👨‍🏫</div>
+                                <div class="ref-info">
+                                    <h4 class="ref-name">Dr. CHHLONH Chhith</h4>
+                                    <div class="ref-title">Lecturer, Dept. of Electrical &amp; Energy Engineering</div>
+                                    <div class="ref-inst">Institute of Technology of Cambodia (ITC)</div>
+                                    <div class="ref-contact">
+                                        <a href="mailto:chhith@itc.edu.kh" class="ref-link">✉️ chhith@itc.edu.kh</a>
+                                        <a href="tel:+85586486874" class="ref-link">📞 +855 86 486 874</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ref-divider"></div>
+
+                            <!-- Ref 2 -->
+                            <div class="ref-profile">
+                                <div class="ref-avatar">🔬</div>
+                                <div class="ref-info">
+                                    <h4 class="ref-name">Dr. BUN Menghorng</h4>
+                                    <div class="ref-title">Laboratory Manager, Dept. of Electrical &amp; Energy Engineering</div>
+                                    <div class="ref-inst">Institute of Technology of Cambodia (ITC)</div>
+                                    <div class="ref-contact">
+                                        <a href="mailto:bun.menghorng@itc.edu.kh" class="ref-link">✉️ bun.menghorng@itc.edu.kh</a>
+                                        <a href="tel:+855968949340" class="ref-link">📞 +855 96 894 9340</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- 07. CONTACT & COMMISSION INQUIRY              -->
+        <!-- ============================================== -->
+        <section id="contact" class="content-section bg-alt-dark">
+            <div class="section-container">
+                <div class="section-header">
+                    <div class="section-tag">
+                        <span class="tag-bracket">[</span> DIRECT SECURE TRANSMISSION <span class="tag-bracket">]</span>
+                    </div>
+                    <h2 class="section-title">
+                        GET IN <span class="text-glow-cyan">TOUCH</span>
+                    </h2>
+                    <p class="section-subtitle">
+                        Available for MEP engineering contracts, building infrastructure projects, and industrial robotics development.
+                    </p>
+                </div>
+
+                <div class="contact-terminal-grid">
+                    <!-- Contact Cards & Coordinates -->
+                    <div class="contact-info-panel glass-panel">
+                        <h3 class="panel-heading">Direct Coordinates</h3>
+                        <p class="panel-sub">Feel free to reach out directly via telephone or email for engineering blueprints, collaborations, or job opportunities.</p>
+
+                        <div class="contact-channel-list">
+                            <!-- Email -->
+                            <div class="channel-card">
+                                <div class="channel-icon">✉️</div>
+                                <div class="channel-detail">
+                                    <span class="ch-label">Official Email</span>
+                                    <a href="mailto:Chornphilip8@gmail.com" class="ch-val hover-cyan">Chornphilip8@gmail.com</a>
+                                </div>
+                                <button class="btn-copy" onclick="copyToClipboard('Chornphilip8@gmail.com', this)" title="Copy Email">
+                                    📋
+                                </button>
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="channel-card">
+                                <div class="channel-icon">📱</div>
+                                <div class="channel-detail">
+                                    <span class="ch-label">Primary Telephone</span>
+                                    <a href="tel:0968298504" class="ch-val hover-amber">0968298504 / 0715115979</a>
+                                    <span class="ch-alt">Alt: 069779637</span>
+                                </div>
+                                <button class="btn-copy" onclick="copyToClipboard('0968298504', this)" title="Copy Phone">
+                                    📋
+                                </button>
+                            </div>
+
+                            <!-- Location -->
+                            <div class="channel-card">
+                                <div class="channel-icon">📍</div>
+                                <div class="channel-detail">
+                                    <span class="ch-label">Base Location</span>
+                                    <span class="ch-val">Toul Sangke, Phnom Penh, Cambodia</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Direct Document Downloads -->
+                        <div class="doc-downloads-card">
+                            <h4 class="doc-title">Download Official Engineering Dossiers</h4>
+                            <div class="doc-btn-row">
+                                <a href="CHORN_PHILIP_CV_NEW.pdf" target="_blank" download="CHORN_PHILIP_CV_NEW.pdf" class="doc-btn btn-cyan-outline">
+                                    <span>📄 Full CV (PDF)</span>
+                                </a>
+                                <a href="CHORN_PHILIP_RESUME.pdf" target="_blank" download="CHORN_PHILIP_RESUME.pdf" class="doc-btn btn-amber-outline">
+                                    <span>📑 Resume (PDF)</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Contact Terminal Form -->
+                    <div class="contact-form-panel glass-panel">
+                        <div class="form-header">
+                            <span class="form-title">TRANSMIT ENGINEERING INQUIRY</span>
+                            <span class="form-id">ENCRYPTED // TLS 1.3</span>
+                        </div>
+
+                        <form id="contact-form" onsubmit="handleFormSubmit(event)">
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="sender-name">Your Full Name / Entity *</label>
+                                    <input type="text" id="sender-name" required placeholder="e.g. Sopheak Som / B&MEP Construction" class="form-input">
+                                </div>
+                                <div class="form-field">
+                                    <label for="sender-email">Email Address *</label>
+                                    <input type="email" id="sender-email" required placeholder="name@company.com" class="form-input">
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="inquiry-type">Inquiry Classification</label>
+                                <select id="inquiry-type" class="form-input">
+                                    <option value="mep">Commercial MEP &amp; HVAC Construction</option>
+                                    <option value="robotics">Robotics, Automation &amp; Embedded Firmware</option>
+                                    <option value="drafting">AutoCAD &amp; DIALux Blueprint Drafting / BOQ</option>
+                                    <option value="fulltime">Full-Time Engineering Employment</option>
+                                    <option value="other">General Engineering Collaboration</option>
+                                </select>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="sender-msg">Project Scope &amp; Specifications *</label>
+                                <textarea id="sender-msg" rows="5" required placeholder="Provide details regarding project timeline, building specs, or hardware requirements..." class="form-input"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn-cyan w-full text-center" id="btn-submit-form">
+                                <span class="btn-icon">🚀</span>
+                                <span>Send Encrypted Transmission</span>
+                            </button>
+
+                            <div id="form-feedback" class="form-feedback hidden"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================== -->
+    <!-- MODAL FOR DETAILED PROJECT SPECIFICATIONS      -->
+    <!-- ============================================== -->
+    <div id="project-modal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-container glass-panel">
+            <button class="modal-close" onclick="closeProjectModal()" aria-label="Close project modal">&times;</button>
+            <div id="modal-content" class="modal-body">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div id="toast" class="toast-notification"></div>
+
+    <!-- FOOTER -->
+    <footer class="glass-footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <span class="footer-brand">CHORN PHILIP</span>
+                <span class="footer-copy">&copy; 2026. All rights reserved. Electrical &bull; MEP &bull; Robotics &bull; ITC &bull; ECAM LaSalle.</span>
+            </div>
+            <div class="footer-right">
+                <a href="#home" class="back-to-top" title="Back to top">
+                    <span>TOP</span>
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Script -->
+    <script src="script.js"></script>
+</body>
+</html>
