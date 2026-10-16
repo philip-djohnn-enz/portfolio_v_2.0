@@ -359,7 +359,7 @@ const PROJECT_DETAILS = {
 
     'drone': {
         title: "Autonomous Agricultural Spraying Drone",
-        category: "Precision Agri-Tech // Autonomous UAV Robotics",
+        category: "Precision Agri-Tech // Autonomous Quadcopter Robotics",
         period: "2025 – 2026",
         icon: "🚁",
         overview: "Designed and prototyped a compact autonomous spraying drone built on an F450 quadcopter frame. Integrated a Pixhawk flight controller with GPS, high-efficiency SunnySky brushless motors, and a micro water pump system configured for automated waypoint flight and targeted liquid spraying.",
@@ -375,7 +375,7 @@ const PROJECT_DETAILS = {
             "Integrated a dedicated micro pump mechanism synchronized with flight controls for precision targeted liquid spraying."
         ],
         links: [
-            { label: "📁 UAV Project Drive", url: "https://drive.google.com/drive/folders/1SXOPA0mHIRif5qI7VDVZ5DIcDdlCe4ZN?usp=sharing", type: "drive" }
+            { label: "📁 Quadcopter Project Drive", url: "https://drive.google.com/drive/folders/1SXOPA0mHIRif5qI7VDVZ5DIcDdlCe4ZN?usp=sharing", type: "drive" }
         ]
     },
 
