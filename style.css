@@ -696,6 +696,24 @@ body {
     z-index: 1;
 }
 
+/* Side C: STEM instructor — sits at rotateY(270deg) hidden, rotates in when .flipped-stem */
+.cutout-side-c {
+    transform: rotateY(270deg);
+    z-index: 1;
+}
+
+.cutout-flipper.flipped-stem {
+    transform: rotateY(270deg);
+}
+
+/* Purple tint on switch button when STEM active */
+.dual-role-btn.is-stem {
+    border-color: #a855f7;
+    color: #e9d5ff;
+}
+
+
+
 .subject-cutout {
     max-height: 100%;
     width: auto;

@@ -191,7 +191,7 @@ function initHeroParallax() {
     updateParallax();
 }
 
-let isHeroFlipped = false;
+let heroFlipState = 0; // 0 = MEP, 1 = Robotics, 2 = STEM
 window.toggleHeroFlip = function(event) {
     if (event) {
         event.stopPropagation();
@@ -203,10 +203,18 @@ window.toggleHeroFlip = function(event) {
 
     if (!flipper) return;
 
-    isHeroFlipped = !isHeroFlipped;
-    flipper.classList.toggle('flipped', isHeroFlipped);
+    // Cycle to next state
+    heroFlipState = (heroFlipState + 1) % 3;
 
-    if (isHeroFlipped) {
+    // Remove all state classes
+    flipper.classList.remove('flipped', 'flipped-stem');
+    if (switchBtn) {
+        switchBtn.classList.remove('is-robotics', 'is-stem');
+    }
+
+    if (heroFlipState === 1) {
+        // Robotics (Side B)
+        flipper.classList.add('flipped');
         playAudioBeep(520, 0.08, 'triangle', 0.08);
         if (roleText) roleText.textContent = "ROBOTICS & EMBEDDED";
         if (switchBtn) switchBtn.classList.add('is-robotics');
@@ -214,16 +222,28 @@ window.toggleHeroFlip = function(event) {
             backdropGlow.style.background = 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, rgba(239, 68, 68, 0.15) 45%, transparent 70%)';
         }
         showToast("Switched View: Robotics Lab & PCB Hardware");
+    } else if (heroFlipState === 2) {
+        // STEM Instructor (Side C)
+        flipper.classList.add('flipped-stem');
+        playAudioBeep(660, 0.08, 'sine', 0.08);
+        if (roleText) roleText.textContent = "STEM & PHYSICS INSTRUCTOR";
+        if (switchBtn) switchBtn.classList.add('is-stem');
+        if (backdropGlow) {
+            backdropGlow.style.background = 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(109, 40, 217, 0.15) 45%, transparent 70%)';
+        }
+        showToast("Switched View: STEM Physics Instructor");
     } else {
+        // MEP Engineer (Side A)
         playAudioBeep(720, 0.08, 'sine', 0.08);
         if (roleText) roleText.textContent = "MEP & HVAC ENGINEER";
-        if (switchBtn) switchBtn.classList.remove('is-robotics');
         if (backdropGlow) {
             backdropGlow.style.background = 'radial-gradient(circle, rgba(0, 242, 254, 0.25) 0%, rgba(245, 158, 11, 0.15) 40%, transparent 70%)';
         }
         showToast("Switched View: MEP & HVAC Field Operations");
     }
 };
+
+
 
 /* ==========================================================================
    03. 3D TILT EFFECT ON GLASS CARDS
