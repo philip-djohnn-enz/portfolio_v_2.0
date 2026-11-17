@@ -47,8 +47,19 @@ Built with pure vanilla **HTML5**, modern **CSS3** (glassmorphism, 3D transforms
 ├── index.html                # Semantic HTML5 architecture and UI components
 ├── style.css                 # Glassmorphism design system & 3D CSS animations
 ├── script.js                 # Interactive canvas, 3D flip card, PID simulator & audio engine
+├── i18n.js                   # English / Khmer / Chinese translations + language switcher
 └── README.md                 # Project documentation
 ```
+
+---
+
+## 🌐 Languages (English / ខ្មែរ / 中文)
+
+- Visitors switch language with the **EN · ខ្មែរ · 中文** buttons in the top bar. Their choice is remembered.
+- Share a link in a specific language with `?lang=km`, `?lang=zh` or `?lang=en` (e.g. `index.html?lang=km`).
+- Link straight to a project pop-up with `#project-drone`, `#project-quadruped`, `#project-linefollower`, `#project-mep-hvac`, `#project-dialux` or `#project-pcb`.
+
+**Editing text:** English is written directly in `index.html`. Any element with `data-i18n="some.key"` has its Khmer and Chinese version in `i18n.js` under the same key (`I18N.km` / `I18N.zh`). Project pop-up text is in `PROJECT_DETAILS` (English, `script.js`) and `PROJECTS` (Khmer/Chinese, `i18n.js`). If a translation is missing, the English text is shown instead.
 
 ---
 
