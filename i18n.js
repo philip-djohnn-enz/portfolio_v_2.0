@@ -58,7 +58,7 @@
             'scene.tip': 'ផ្ទៃខាងក្រោយប្ដូរតាមជំនាញរបស់ខ្ញុំ — ចុចដើម្បីប្ដូរ',
             'hero.status': 'ទំនេរសម្រាប់ការងារ MEP រ៉ូបូត និងបង្រៀន',
             'hero.headline': 'វិស្វកម្ម <span class="text-glow-cyan">MEP</span> ច្បាស់លាស់<br>និង<span class="text-glow-amber">រ៉ូបូត</span>ទំនើប',
-            'hero.bio': '<strong>ជន ភីលីព</strong> — និស្សិតវិស្វកម្មអគ្គិសនីឆ្នាំទី៤ នៅ<strong>វិទ្យាស្ថានបច្ចេកវិទ្យាកម្ពុជា (ITC)</strong> ក្នុង<strong>កម្មវិធីសញ្ញាបត្រពីរ ECAM LaSalle</strong>។ បច្ចេកទេស MEP នៅ<strong>ក្រុមហ៊ុន B&amp;MEP Engineering Construction</strong> ធ្វើការលើប្រព័ន្ធ HVAC ការចែកចាយអគ្គិសនី STM32 firmware និងរ៉ូបូតស្វ័យប្រវត្តិ។',
+            'hero.bio': '<strong>ចន ហ្វីលីប</strong> — និស្សិតវិស្វកម្មអគ្គិសនីឆ្នាំទី៤ នៅ<strong>វិទ្យាស្ថានបច្ចេកវិទ្យាកម្ពុជា (ITC)</strong> ក្នុង<strong>កម្មវិធីសញ្ញាបត្រពីរ ECAM LaSalle</strong>។ បច្ចេកទេស MEP នៅ<strong>ក្រុមហ៊ុន B&amp;MEP Engineering Construction</strong> ធ្វើការលើប្រព័ន្ធ HVAC ការចែកចាយអគ្គិសនី STM32 firmware និងរ៉ូបូតស្វ័យប្រវត្តិ។',
             'hero.ctaProjects': 'មើលគម្រោងរបស់ខ្ញុំ',
             'hero.ctaContact': 'ធ្វើការជាមួយខ្ញុំ',
             'hero.ctaCv': 'មើល CV',
@@ -675,7 +675,7 @@
             'filter.showing': 'Showing {n} project(s)'
         },
         km: {
-            'doc.title': 'ជន ភីលីព | វិស្វករអគ្គិសនី និង MEP | រ៉ូបូត និងស្វ័យប្រវត្តិកម្ម',
+            'doc.title': 'ចន ហ្វីលីប | វិស្វករអគ្គិសនី និង MEP | រ៉ូបូត និងស្វ័យប្រវត្តិកម្ម',
             'lang.changed': 'ភាសា៖ ខ្មែរ',
             'role.mep': 'វិស្វករ MEP និង HVAC',
             'role.robo': 'រ៉ូបូត និង Embedded',
