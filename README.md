@@ -56,7 +56,7 @@ Built with pure vanilla **HTML5**, modern **CSS3** (glassmorphism, 3D transforms
 
 ## 🎬 Animated Backgrounds
 
-Clicking **MEP / Robotics / STEM** in the hero cross-fades the full-page background between three scenes drawn in `scenes.js` (pure canvas code, no images):
+Clicking **MEP / Robotics / STEM** in the hero morphs the full-page background between three **3-D scenes** rendered with WebGL (`scenes3d.js`, using three.js r128 from cdnjs). The camera drifts slowly, follows the mouse and sweeps around the stage when the scene changes. Everything moves with simple real physics: the crane load swings like a pendulum, robot arms use inverse kinematics, drones bank with their acceleration. If WebGL or the CDN is unavailable, the 2-D canvas version in `scenes.js` is used instead (no images in either):
 
 - **MEP** — a building rising floor by floor with ducts, airflow, water and power risers, an AHU fan and a tower crane lifting a duct section
 - **Robotics** — two robot arms picking boxes off a conveyor, scanning drones, PCB traces with signal pulses
