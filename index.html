@@ -148,6 +148,12 @@
         <!-- 01. HERO SECTION WITH 3D DEPTH & CUTOUT       -->
         <!-- ============================================== -->
         <section id="home" class="hero-section">
+            <!-- Caption for the animated background (click to change scene) -->
+            <button type="button" class="scene-chip" id="scene-chip" data-scene="0" data-i18n-title="scene.tip" title="The background changes with my specialty — click to switch">
+                <span class="scene-dot" aria-hidden="true"></span>
+                <span class="scene-live" data-i18n="scene.live">LIVE SCENE</span>
+                <span class="scene-name" id="scene-name">Construction site</span>
+            </button>
             <!-- Massive Kinetic Typography Behind Subject -->
             <div class="kinetic-typography-layer" aria-hidden="true">
                 <div class="kinetic-text kinetic-row-1" data-speed="1.2">CHORN PHILIP</div>
@@ -1250,6 +1256,7 @@
 
     <!-- Scripts: translations first, then app logic -->
     <script src="i18n.js"></script>
+    <script src="scenes.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -43,92 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
    01. INTERACTIVE BLUEPRINT & CIRCUIT CANVAS
    ========================================================================== */
 function initBlueprintCanvas() {
-    const canvas = document.getElementById('blueprint-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
-
-    window.addEventListener('resize', () => {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        if (prefersReducedMotion) render();
-    });
-
-    const nodes = [];
-    // Fewer nodes on phones keeps scrolling smooth
-    const nodeCount = Math.floor(Math.min(width, 1400) / (width < 768 ? 70 : 45));
-
-    for (let i = 0; i < nodeCount; i++) {
-        nodes.push({
-            x: Math.random() * width,
-            y: Math.random() * height,
-            vx: (Math.random() - 0.5) * 0.4,
-            vy: (Math.random() - 0.5) * 0.4,
-            size: Math.random() * 2 + 1,
-            color: Math.random() > 0.8 ? '#f59e0b' : '#00f2fe',
-            pulse: Math.random() * Math.PI
-        });
-    }
-
-    const gridSize = 60;
-
-    function render() {
-        ctx.clearRect(0, 0, width, height);
-
-        ctx.strokeStyle = 'rgba(0, 242, 254, 0.025)';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < width; x += gridSize) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
-        }
-        for (let y = 0; y < height; y += gridSize) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-        }
-
-        for (let i = 0; i < nodes.length; i++) {
-            const p = nodes[i];
-            if (!prefersReducedMotion) {
-                p.x += p.vx; p.y += p.vy; p.pulse += 0.03;
-                if (p.x < 0 || p.x > width) p.vx *= -1;
-                if (p.y < 0 || p.y > height) p.vy *= -1;
-            }
-
-            const glow = Math.sin(p.pulse) * 0.5 + 0.5;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.shadowBlur = 10 * glow;
-            ctx.shadowColor = p.color;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            for (let j = i + 1; j < nodes.length; j++) {
-                const p2 = nodes[j];
-                const dx = p.x - p2.x;
-                const dy = p.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 130) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = p.color === '#f59e0b'
-                        ? `rgba(245, 158, 11, ${(1 - dist / 130) * 0.25})`
-                        : `rgba(0, 242, 254, ${(1 - dist / 130) * 0.25})`;
-                    ctx.lineWidth = 0.8;
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }
-            }
-        }
-    }
-
-    if (prefersReducedMotion) { render(); return; }
-
-    function loop() {
-        if (!document.hidden) render(); // pause work when the tab is in the background
-        requestAnimationFrame(loop);
-    }
-    loop();
+    // Animated MEP / Robotics / STEM backgrounds live in scenes.js
+    if (window.BgScenes) window.BgScenes.init();
 }
 
 /* ==========================================================================
@@ -225,6 +141,7 @@ function setHeroRole(index, { silent = false } = {}) {
     if (seg) seg.dataset.active = String(heroFlipState);
 
     refreshRoleLabel();
+    if (window.BgScenes) window.BgScenes.setScene(heroFlipState);
     if (!silent) {
         playAudioBeep([720, 520, 660][heroFlipState], 0.08, heroFlipState === 1 ? 'triangle' : 'sine', 0.08);
         showToast(t('toast.' + ROLE_KEYS[heroFlipState]));
@@ -234,6 +151,10 @@ function setHeroRole(index, { silent = false } = {}) {
 function refreshRoleLabel() {
     const roleText = document.getElementById('active-role-text');
     if (roleText) roleText.textContent = t('role.' + ROLE_KEYS[heroFlipState]);
+    const sceneName = document.getElementById('scene-name');
+    if (sceneName) sceneName.textContent = t('scene.' + ROLE_KEYS[heroFlipState]);
+    const chip = document.getElementById('scene-chip');
+    if (chip) chip.dataset.scene = String(heroFlipState);
 }
 
 window.toggleHeroFlip = function (event) {
@@ -242,6 +163,7 @@ window.toggleHeroFlip = function (event) {
 };
 
 function initRoleSwitcher() {
+    document.getElementById('scene-chip')?.addEventListener('click', () => setHeroRole(heroFlipState + 1));
     document.querySelectorAll('.role-seg-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();

@@ -48,8 +48,21 @@ Built with pure vanilla **HTML5**, modern **CSS3** (glassmorphism, 3D transforms
 ├── style.css                 # Glassmorphism design system & 3D CSS animations
 ├── script.js                 # Interactive canvas, 3D flip card, PID simulator & audio engine
 ├── i18n.js                   # English / Khmer / Chinese translations + language switcher
+├── scenes.js                 # Animated backgrounds: MEP site, robotics cell, STEM physics lab
 └── README.md                 # Project documentation
 ```
+
+---
+
+## 🎬 Animated Backgrounds
+
+Clicking **MEP / Robotics / STEM** in the hero cross-fades the full-page background between three scenes drawn in `scenes.js` (pure canvas code, no images):
+
+- **MEP** — a building rising floor by floor with ducts, airflow, water and power risers, an AHU fan and a tower crane lifting a duct section
+- **Robotics** — two robot arms picking boxes off a conveyor, scanning drones, PCB traces with signal pulses
+- **STEM** — floating physics formulas, a pendulum, projectile motion, an atom and wave interference
+
+The background dims automatically while visitors read lower sections, pauses when the tab is hidden, and stays still for people who turn on "reduce motion".
 
 ---
 
