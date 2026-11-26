@@ -9,10 +9,11 @@
  *                   welding sparks and a warm work light; AHU with a spinning fan and duct airflow;
  *                   a slewing tower crane that shuttles duct sections between stockpiles. The load is
  *                   a 2-axis pendulum driven by the slew/trolley acceleration (it sways and settles).
- *   1  ROBOTICS   — conveyor with cartons; two articulated robot arms (yaw + shoulder + elbow + wrist,
- *                   real inverse kinematics) that track a carton on the moving belt, grip it, swing it
- *                   round in joint space and stack it on a pallet that an AGV carries away; quadcopters
- *                   that bank with their acceleration; a PCB backdrop with signal pulses.
+ *   1  ROBOTICS   — closed-loop electronics assembly line: 12 fixture carriers circulate over/under
+ *                   (top lane → drop elevator → return lane → lift elevator) and index in sync while six
+ *                   stations work in parallel — robot load (gripper), PCB insert (vacuum), XYZ screwdriving
+ *                   gantry, lid place (vacuum), laser seam weld with sparks, vision QC arch, robot unload
+ *                   onto two mecanum AGVs that swap at the dock; quadcopters and a PCB backdrop.
  *   2  STEM       — spherical pendulum (precessing orbit, RK4), a ball that bounces with restitution,
  *                   a 3-D atom with orbiting electrons, a two-source wave-interference surface and
  *                   physics formulas floating at different depths.
@@ -62,7 +63,9 @@
         var dv = clamp(vd - o.v, -amax * dt, amax * dt);
         o.a = dt ? dv / dt : 0;
         o.v += dv; o.x += o.v * dt;
-        if (Math.abs(target - o.x) < eps && Math.abs(o.v) < amax * 0.05) { o.x = target; o.v = 0; o.a = 0; return true; }
+        // settle: close enough and slow, or we just stepped across the target at low speed (big frame steps)
+        var crossed = (d > 0) !== (target - o.x > 0) && Math.abs(o.v) < amax * dt * 3 + amax * 0.05;
+        if ((Math.abs(target - o.x) < eps && Math.abs(o.v) < amax * 0.05) || crossed) { o.x = target; o.v = 0; o.a = 0; return true; }
         return false;
     }
     /* Straight-line 3-D move with a feed-forward velocity so a tool can follow a moving target. */
@@ -528,62 +531,155 @@
     }
 
     /* ================================================================== */
-    /* SCENE 1 — ROBOTICS / AUTOMATION CELL                               */
+    /* SCENE 1 — ROBOTIC ASSEMBLY LINE (closed loop)                       */
     /* ================================================================== */
+    /* A pallet-carrier assembly line, the way electronics are really built. Twelve fixture carriers ride
+       a closed over/under loop (top lane → drop elevator → return lane underneath → lift elevator) and
+       index forward together one pitch at a time. While the line dwells, every station works in parallel:
+         01 LOAD    6-axis robot, parallel gripper: housing from the infeed table onto the carrier
+         02 PCB     robot with vacuum cups inserts the circuit board
+         03 SCREW   XYZ gantry drives four screws, one corner after another
+         04 LID     robot with vacuum cups places the cover
+         05 WELD    laser gantry traces the seam (sparks, hot bead)
+            QC      vision arch scans every unit as it passes underneath
+         06 UNLOAD  robot palletises finished units; a full pallet leaves on a mecanum AGV while the
+                    standby AGV docks, then loops round behind the line back to standby.
+       The emptied carrier drops to the return lane and comes back to station 01 — an endless loop. */
     function buildRobo() {
         var kit = new Kit(), g = new T.Group();
         var grid = new T.GridHelper(130, 65); grid.material = kit.add(new T.LineBasicMaterial({ color: COL.amber, opacity: 0.07 })); g.add(grid);
 
-        var V = 0.9, SPACING = 5.2, BS = 0.9, BELT = 1.0, HALF = 20;
-        /* --- Conveyor --- */
-        var frame = meshE(new T.BoxGeometry(HALF * 2, 0.3, 1.8), kit.solid(0x1e293b, 0.96, 0.08), kit.line(COL.amber, 0.6)); frame.position.set(0, 0.85, 0); g.add(frame);
-        [-0.92, 0.92].forEach(function (z) {
-            var rail = new T.Mesh(new T.BoxGeometry(HALF * 2, 0.14, 0.1), kit.solid(COL.amber, 0.95, 0.35)); rail.position.set(0, 1.07, z); g.add(rail);
-        });
-        var legGeo = new T.BoxGeometry(0.14, 0.7, 0.14), mLeg = kit.solid(0x334155, 0.95, 0.1);
-        for (var lx = -18; lx <= 18; lx += 4) [-0.75, 0.75].forEach(function (z) { var l = new T.Mesh(legGeo, mLeg); l.position.set(lx, 0.35, z); g.add(l); });
-        var rollers = [-HALF, HALF].map(function (x) {
-            var r = meshE(new T.CylinderGeometry(0.32, 0.32, 1.7, 16), kit.solid(0x475569, 0.95, 0.1), kit.line(COL.amber, 0.5));
-            r.rotation.x = Math.PI / 2; r.position.set(x, 0.85, 0); g.add(r); return r;
-        });
-        var cleatGeo = new T.BoxGeometry(0.07, 0.03, 1.55), mCleat = kit.solid(COL.amber, 0.7, 0.25), cleats = [];
-        for (var ci = 0; ci < HALF * 2; ci++) { var cl = new T.Mesh(cleatGeo, mCleat); cl.position.set(0, BELT + 0.01, 0); g.add(cl); cleats.push(cl); }
-        var cvLbl = new Label(kit, COL.amber, 0.7, 'left'); cvLbl.sprite.position.set(-HALF + 0.5, 0.2, 1.6); g.add(cvLbl.sprite);
-        cvLbl.set('CONVEYOR CV-02 · ' + V.toFixed(2) + ' m/s');
-
-        /* --- Cartons --- */
-        var boxGeo = new T.BoxGeometry(BS, BS, BS), tapeGeo = new T.BoxGeometry(BS + 0.01, 0.02, 0.2);
-        var mBox = kit.solid(0xb07a3c, 0.96, 0.14, 0.05), lBox = kit.line(COL.amber, 0.85), mTape = kit.solid(COL.orange, 0.95, 0.3);
-        var boxes = [], bid = 0;
-        for (var bi = 0; bi < 18; bi++) {
-            var bm = meshE(boxGeo, mBox, lBox), tape = new T.Mesh(tapeGeo, mTape); tape.position.y = BS / 2 + 0.005; bm.add(tape);
-            bm.visible = false; g.add(bm); boxes.push({ m: bm, s: 'free', x: 0, claimed: -1, id: 0 });
+        /* ---------- loop geometry ---------- */
+        var HALF = 16, TOPY = 1.3, BOTY = 0.35, DROP = TOPY - BOTY, CZ = 0, PT = 0.16;
+        var LOOP = 4 * HALF + 2 * DROP, NC = 12, PITCH = LOOP / NC, OFF = (2 * HALF - 5 * PITCH) / 2;
+        var SX = []; for (var si = 0; si < 6; si++) SX.push(-HALF + OFF + si * PITCH);
+        function pathAt(s, out) {
+            s = ((s % LOOP) + LOOP) % LOOP;
+            if (s < 2 * HALF) { out.x = -HALF + s; out.y = TOPY; out.lane = 0; }
+            else if (s < 2 * HALF + DROP) { out.x = HALF; out.y = TOPY - (s - 2 * HALF); out.lane = 1; }
+            else if (s < 4 * HALF + DROP) { out.x = HALF - (s - 2 * HALF - DROP); out.y = BOTY; out.lane = 2; }
+            else { out.x = -HALF; out.y = BOTY + (s - 4 * HALF - DROP); out.lane = 3; }
+            return out;
         }
-        function spawn(x) {
-            for (var i = 0; i < boxes.length; i++) if (boxes[i].s === 'free') {
-                var b = boxes[i]; b.s = 'belt'; b.x = x; b.claimed = -1; b.id = bid++;
-                b.m.visible = true; b.m.rotation.set(0, 0, 0); b.m.position.set(x, BELT + BS / 2, 0); return b;
-            }
-            return null;
-        }
-        var sx0 = [];
-        for (var sx = HALF - 2; sx > -HALF + 0.6; sx -= SPACING) sx0.unshift(sx);
-        sx0.forEach(spawn);
-        var beltPos = 0, beltDist = 0;
+        var _p = { x: 0, y: 0, lane: 0 };
 
-        /* --- Robot arms --- */
-        var L1 = 2.6, L2 = 2.3, BZ = -2.7, SHY = 1.75;
-        var mDark = kit.solid(0x1f2937, 0.96, 0.08), lAmber = kit.line(COL.amber, 0.7), lCyan = kit.line(COL.cyan, 0.8);
+        /* ---------- materials ---------- */
+        var mDark = kit.solid(0x1f2937, 0.96, 0.08), mFrame = kit.solid(0x1e293b, 0.96, 0.08), mBelt = kit.solid(0x0b1220, 0.97, 0.05);
+        var mRail = kit.solid(COL.amber, 0.95, 0.35), mLeg = kit.solid(0x334155, 0.95, 0.1);
+        var lAmber = kit.line(COL.amber, 0.7), lAmberS = kit.line(COL.amber, 0.45), lCyan = kit.line(COL.cyan, 0.8), lCyanS = kit.line(COL.cyan, 0.45);
         var mLink = kit.solid(COL.amber, 0.96, 0.22, 0.6), mJoint = kit.solid(COL.cyan, 0.96, 0.45, 0.5), mTurret = kit.solid(COL.orange, 0.96, 0.25, 0.5);
+
+        /* ---------- conveyor: top lane + return lane underneath ---------- */
+        [TOPY, BOTY].forEach(function (y) {
+            var belt = meshE(new T.BoxGeometry(2 * HALF, 0.08, 1.15), mBelt, lAmberS); belt.position.set(0, y - 0.045, CZ); g.add(belt);
+            [-0.66, 0.66].forEach(function (z) { var r = new T.Mesh(new T.BoxGeometry(2 * HALF, 0.1, 0.08), mRail); r.position.set(0, y + 0.02, CZ + z); g.add(r); });
+        });
+        var legGeo = new T.BoxGeometry(0.14, TOPY - 0.09, 0.14);
+        for (var lx = -HALF + 1; lx <= HALF - 1; lx += 3.75) [-0.72, 0.72].forEach(function (z) { var l = new T.Mesh(legGeo, mLeg); l.position.set(lx, (TOPY - 0.09) / 2, CZ + z); g.add(l); });
+        var cleatGeo = new T.BoxGeometry(0.06, 0.025, 1.0), mCleat = kit.solid(COL.amber, 0.6, 0.25), cleatsT = [], cleatsB = [];
+        for (var ci = 0; ci < 2 * HALF; ci++) {
+            var c1 = new T.Mesh(cleatGeo, mCleat); c1.position.set(0, TOPY + 0.003, CZ); g.add(c1); cleatsT.push(c1);
+            var c2 = new T.Mesh(cleatGeo, mCleat); c2.position.set(0, BOTY + 0.003, CZ); g.add(c2); cleatsB.push(c2);
+        }
+        var drumGeo = new T.CylinderGeometry(0.2, 0.2, 1.2, 14), mDrum = kit.solid(0x475569, 0.95, 0.1), drums = [];
+        [[-HALF, TOPY], [HALF, TOPY], [-HALF, BOTY], [HALF, BOTY]].forEach(function (p) {
+            var d = meshE(drumGeo, mDrum, lAmberS); d.rotation.x = Math.PI / 2; d.position.set(p[0], p[1] - 0.2, CZ); g.add(d); drums.push(d);
+        });
+        // end elevators: carriers drop to the return lane on the right and are lifted back up on the left
+        var elevs = [-HALF, HALF].map(function (x, k) {
+            var E = { x: x, lane: k ? 1 : 3, rest: k ? TOPY : BOTY, y: { x: k ? TOPY : BOTY, v: 0, a: 0 } };
+            var ox = x + (k ? 1.0 : -1.0), mh = TOPY + 1.3;
+            var postGeo = new T.BoxGeometry(0.14, mh, 0.14);
+            [-0.85, 0.85].forEach(function (z) { var p = meshE(postGeo, mFrame, lCyanS); p.position.set(ox, mh / 2, CZ + z); g.add(p); });
+            var top = new T.Mesh(new T.BoxGeometry(0.14, 0.14, 1.84), mRail); top.position.set(ox, mh, CZ); g.add(top);
+            E.plat = meshE(new T.BoxGeometry(1.8, 0.06, 1.3), mDark, lCyan); E.plat.position.set(x, E.y.x - 0.03, CZ); g.add(E.plat);
+            E.lbl = new Label(kit, COL.cyan, 0.42); E.lbl.sprite.position.set(ox, mh + 0.45, CZ); g.add(E.lbl.sprite);
+            E.lbl.set(k ? 'DROP ▼' : 'LIFT ▲');
+            return E;
+        });
+
+        /* ---------- product parts (origin = carrier plate top) ---------- */
+        var PART = { base: { lo: 0, hi: 0.3 }, pcb: { lo: 0.3, hi: 0.35 }, lid: { lo: 0.3, hi: 0.44 }, unit: { lo: 0, hi: 0.44 } };
+        var gHouse = new T.BoxGeometry(1.1, 0.3, 0.8), gPcb = new T.BoxGeometry(0.96, 0.05, 0.66);
+        var gChip = new T.BoxGeometry(0.24, 0.05, 0.2), gChip2 = new T.BoxGeometry(0.14, 0.04, 0.3), gLed = new T.BoxGeometry(0.06, 0.04, 0.06);
+        var gScrew = new T.CylinderGeometry(0.055, 0.055, 0.07, 10), gLid = new T.BoxGeometry(1.12, 0.14, 0.82);
+        var mHouse = kit.solid(0x475569, 0.96, 0.12, 0.55), lHouse = kit.line(COL.cyan, 0.55);
+        var mPcb = kit.solid(0x0e7c4d, 0.97, 0.35, 0.15), lPcb = kit.line(COL.green, 0.8), mChip = kit.solid(0x0b0f19, 0.97, 0.05);
+        var mScrew = kit.solid(0xd1d5db, 0.97, 0.3, 0.9), mLid = kit.glass(COL.cyan, 0.16), lLid = kit.line(COL.cyan, 0.85), lSeam = kit.line(0xffc46b, 0.95, true);
+        var SCREW_XZ = [[-0.4, -0.25], [0.4, -0.25], [0.4, 0.25], [-0.4, 0.25]];
+        var SEAM = [[-0.56, -0.41], [0.56, -0.41], [0.56, 0.41], [-0.56, 0.41], [-0.56, -0.41]], SEAM_LEN = 2 * (1.12 + 0.82);
+        var sp0 = []; for (var sk = 0; sk < 4; sk++) sp0.push(SEAM[sk][0], 0.445, SEAM[sk][1], SEAM[sk + 1][0], 0.445, SEAM[sk + 1][1]);
+        var seamGeo = new T.BufferGeometry(); seamGeo.setAttribute('position', new T.Float32BufferAttribute(sp0, 3));
+        function mkHouse() { var m = meshE(gHouse, mHouse, lHouse); m.position.y = 0.15; return m; }
+        function mkPcb() {
+            var m = meshE(gPcb, mPcb, lPcb); m.position.y = 0.325;
+            var a1 = new T.Mesh(gChip, mChip); a1.position.set(-0.2, 0.05, 0.05); m.add(a1);
+            var a2 = new T.Mesh(gChip2, mChip); a2.position.set(0.25, 0.045, -0.08); m.add(a2);
+            var led = new T.Mesh(gLed, mJoint); led.position.set(0.3, 0.045, 0.22); m.add(led);
+            return m;
+        }
+        function mkScrew(k) { var m = new T.Mesh(gScrew, mScrew); m.position.set(SCREW_XZ[k][0], 0.385, SCREW_XZ[k][1]); return m; }
+        function mkLid() { var m = meshE(gLid, mLid, lLid); m.position.y = 0.37; return m; }
+        function mkSeam() { return new T.LineSegments(seamGeo, lSeam); }
+        function mkPart(type) {
+            var p = new T.Group();
+            if (type === 'base' || type === 'unit') p.add(mkHouse());
+            if (type === 'pcb' || type === 'unit') p.add(mkPcb());
+            if (type === 'unit') for (var k = 0; k < 4; k++) p.add(mkScrew(k));
+            if (type === 'lid' || type === 'unit') p.add(mkLid());
+            if (type === 'unit') p.add(mkSeam());
+            return p;
+        }
+
+        /* ---------- fixture carriers ---------- */
+        var gPlate = new T.BoxGeometry(1.5, PT, 1.1), gPin = new T.CylinderGeometry(0.045, 0.045, 0.12, 8);
+        var mPlate = kit.solid(0x111827, 0.97, 0.1), lPlate = kit.line(COL.cyan, 0.65), mPin = kit.solid(COL.amber, 0.95, 0.4);
+        var carriers = [];
+        for (var i = 0; i < NC; i++) {
+            var C = { i: i, g: new T.Group(), prod: new T.Group(), stage: i < 6 ? i : 0, nScrew: 0, qc: i === 5, flash: 0, lane: 0 };
+            var pl = meshE(gPlate, mPlate, lPlate); pl.position.y = PT / 2; C.g.add(pl);
+            for (var pk = -1; pk <= 1; pk += 2) { var pin = new T.Mesh(gPin, mPin); pin.position.set(pk * 0.66, PT + 0.06, pk * 0.45); C.g.add(pin); }
+            C.prod.position.y = PT; C.g.add(C.prod);
+            C.house = mkHouse(); C.pcb = mkPcb(); C.lid = mkLid(); C.seam = mkSeam();
+            C.screws = [mkScrew(0), mkScrew(1), mkScrew(2), mkScrew(3)];
+            [C.house, C.pcb, C.lid, C.seam].concat(C.screws).forEach(function (m) { this.add(m); }, C.prod);
+            C.tag = glowSprite(kit, COL.green, 1.1, 0); C.tag.position.set(0, 0.8, 0); C.prod.add(C.tag);
+            g.add(C.g); carriers.push(C);
+        }
+        function showStage(C) {
+            C.house.visible = C.stage >= 1; C.pcb.visible = C.stage >= 2;
+            for (var k = 0; k < 4; k++) C.screws[k].visible = C.stage >= 3 || (C.stage === 2 && k < C.nScrew);
+            C.lid.visible = C.stage >= 4; C.seam.visible = C.stage >= 5;
+        }
+
+        /* ---------- line control: synchronous indexing ---------- */
+        var LN = { st: 'dwell', k: 0, idx: { x: 0, v: 0, a: 0 }, tm: 0, cyc: 0, last: 0, out: 0, qc: 0 };
+        var NEED = [0, 1, 2, 3, 4, 5], ST = [{}, {}, {}, {}, {}, {}];
+        function slotC(m) { return carriers[((m - LN.k) % NC + NC) % NC]; }
+        function beginDwell() { for (var m = 0; m < 6; m++) ST[m].done = slotC(m).stage !== NEED[m]; LN.tm = 0; }
+        function lineS() { return LN.k * PITCH + LN.idx.x; }
+        function stepLine(dt) {
+            LN.cyc += dt;
+            if (LN.st === 'index') {
+                if (approach1(LN.idx, PITCH, dt, 4.2, 6, 0.002)) {
+                    LN.idx.x = 0; LN.idx.v = 0; LN.k++; LN.st = 'dwell'; LN.last = LN.cyc; LN.cyc = 0; beginDwell();
+                }
+            } else {
+                LN.tm += dt;
+                if (LN.tm > 0.35 && ST.every(function (s) { return s.done; })) LN.st = 'index';
+            }
+        }
+        beginDwell();
+
+        /* ---------- robots ---------- */
+        var L1 = 2.6, L2 = 2.3, BZ = -2.9, SHY = 1.75, FT = 1.0;
         var l1Geo = new T.BoxGeometry(L1, 0.42, 0.48); l1Geo.translate(L1 / 2, 0, 0);
         var l2Geo = new T.BoxGeometry(L2, 0.34, 0.4); l2Geo.translate(L2 / 2, 0, 0);
-        var capGeo = new T.CylinderGeometry(0.3, 0.3, 0.62, 18);
-        var fingerGeo = new T.BoxGeometry(0.09, 0.5, 0.32);
-        var palletGeo = new T.BoxGeometry(1.5, 0.22, 1.5), agvGeo = new T.BoxGeometry(1.8, 0.3, 1.8);
-        var mPallet = kit.solid(0x8b5a2b, 0.95, 0.12, 0.05), mAgv = kit.solid(0x111827, 0.96, 0.1);
+        var capGeo = new T.CylinderGeometry(0.3, 0.3, 0.62, 18), fingerGeo = new T.BoxGeometry(0.3, 0.34, 0.08), cupGeo = new T.CylinderGeometry(0.075, 0.11, 0.1, 12);
 
-        function buildArm(bx, dir) {
-            var A = { bx: bx, dir: dir, root: new T.Group(), yawG: new T.Group(), sh: new T.Group(), el: new T.Group(), wr: new T.Group(), fingers: [] };
+        function buildArm(bx, tool, job, home, ready) {
+            var A = { bx: bx, TO: tool === 'vac' ? 0.65 : 0.58, job: job, home: home, ready: ready, fingers: [], vac: null,
+                root: new T.Group(), yawG: new T.Group(), sh: new T.Group(), el: new T.Group(), wr: new T.Group(), j6: new T.Group() };
             A.root.position.set(bx, 0, BZ); g.add(A.root);
             var plate = meshE(new T.CylinderGeometry(0.9, 1.0, 0.25, 24), mDark, lAmber); plate.position.y = 0.125; A.root.add(plate);
             var ped = meshE(new T.CylinderGeometry(0.5, 0.6, 1.2, 20), mDark, lAmber); ped.position.y = 0.85; A.root.add(ped);
@@ -597,113 +693,74 @@
             A.el.add(meshE(l2Geo, mLink, lAmber));
             A.wr.position.x = L2; A.el.add(A.wr);
             var wrist = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.45, 12), mJoint); wrist.position.y = -0.22; A.wr.add(wrist);
-            var palm = meshE(new T.BoxGeometry(1.3, 0.14, 0.42), mDark, lCyan); palm.position.y = -0.5; A.wr.add(palm);
-            for (var k = 0; k < 2; k++) { var fg = meshE(fingerGeo, mJoint, null); fg.position.y = -0.8; A.wr.add(fg); A.fingers.push(fg); }
-            // pallet on an AGV
-            A.pal = { x: bx - dir * 3.4, z: -4.9, n: 0, boxes: [], off: { x: 0, v: 0, a: 0 }, st: 'idle', grp: new T.Group() };
-            var agv = meshE(agvGeo, mAgv, lCyan); agv.position.y = 0.15; A.pal.grp.add(agv);
-            var pal = meshE(palletGeo, mPallet, lAmber); pal.position.y = 0.41; A.pal.grp.add(pal);
-            A.pal.grp.position.set(A.pal.x, 0, A.pal.z); g.add(A.pal.grp);
-            A.home = { x: bx - 1.6, y: 3.5, z: -0.6 };
-            A.tool = { x: A.home.x, y: A.home.y, z: A.home.z, vx: 0, vy: 0, vz: 0 };
-            A.st = 'wait'; A.tm = 0; A.grip = 0; A.box = null; A.yaw = 0; A.yaw0 = 0;
-            A.lbl = new Label(kit, COL.cyan, 0.62); A.lbl.sprite.position.set(bx, 6.6, BZ); g.add(A.lbl.sprite);
-            A.plbl = new Label(kit, COL.amber, 0.55); A.plbl.sprite.position.set(A.pal.x, 2.6, A.pal.z); g.add(A.plbl.sprite);
+            A.wr.add(A.j6);                                   // J6 keeps the tool square to the line
+            if (tool === 'vac') {
+                var vp = meshE(new T.BoxGeometry(0.9, 0.12, 0.66), mDark, lCyan); vp.position.y = -0.5; A.j6.add(vp);
+                [[-0.3, -0.2], [0.3, -0.2], [0.3, 0.2], [-0.3, 0.2]].forEach(function (p) { var cup = new T.Mesh(cupGeo, mJoint); cup.position.set(p[0], -0.6, p[1]); A.j6.add(cup); });
+                A.vac = glowSprite(kit, COL.cyan, 1.4, 0); A.vac.position.y = -0.66; A.j6.add(A.vac);
+            } else {
+                var gp = meshE(new T.BoxGeometry(0.42, 0.14, 1.36), mDark, lCyan); gp.position.y = -0.5; A.j6.add(gp);
+                for (var k = 0; k < 2; k++) { var fg = new T.Mesh(fingerGeo, mJoint); fg.position.y = -0.73; A.j6.add(fg); A.fingers.push(fg); }
+            }
+            A.tool = { x: home.x, y: home.y, z: home.z, vx: 0, vy: 0, vz: 0 };
             A.cyl = { yaw: { x: 0, v: 0, a: 0 }, rho: { x: 0, v: 0, a: 0 }, y: { x: 0, v: 0, a: 0 } };
+            A.st = 'idle'; A.tm = 0; A.grip = 0; A.tgt = home;
+            A.held = mkPart(job.part); A.held.visible = false; g.add(A.held);
+            cylInit(A);
             return A;
         }
-        var arms = [buildArm(-7, 1), buildArm(7, -1)];
-
         function yawOf(A, x, z) { return Math.atan2(-(z - BZ), x - A.bx); }
         function cylInit(A) {
             var o = A.tool;
             A.cyl.yaw.x = yawOf(A, o.x, o.z); A.cyl.rho.x = Math.hypot(o.x - A.bx, o.z - BZ); A.cyl.y.x = o.y;
             A.cyl.yaw.v = A.cyl.rho.v = A.cyl.y.v = 0;
         }
-        /* joint-space-like move (yaw / reach / height) — big swings arc around the base like a real robot */
+        /* joint-space-like move (yaw / reach / height): big moves arc around the base like a real robot */
         function cylMove(A, tx, ty, tz, dt) {
             var c = A.cyl;
-            var a1 = approach1(c.yaw, wrapAngle(yawOf(A, tx, tz), c.yaw.x), dt, 1.9, 3.2, 0.004);
-            var a2 = approach1(c.rho, Math.hypot(tx - A.bx, tz - BZ), dt, 2.2, 4, 0.01);
-            var a3 = approach1(c.y, ty, dt, 2.2, 4, 0.01);
+            var a1 = approach1(c.yaw, wrapAngle(yawOf(A, tx, tz), c.yaw.x), dt, 2.0, 3.6, 0.004);
+            var a2 = approach1(c.rho, Math.hypot(tx - A.bx, tz - BZ), dt, 2.4, 4.5, 0.01);
+            var a3 = approach1(c.y, ty, dt, 2.4, 4.5, 0.01);
             A.tool.x = A.bx + c.rho.x * Math.cos(c.yaw.x); A.tool.z = BZ - c.rho.x * Math.sin(c.yaw.x); A.tool.y = c.y.x;
             A.tool.vx = A.tool.vy = A.tool.vz = 0;
             return a1 && a2 && a3;
         }
+        var CYL = { idle: 1, toPick: 1, carry: 1, toPlace: 1 };
+        function go(A, st) { if (CYL[st] && !CYL[A.st]) cylInit(A); A.st = st; A.tm = 0; }
 
-        function stepArm(A, ai, dt) {
-            var o = A.tool, P = A.pal, gripY = BELT + BS + 0.55, VM = 3.0, AM = 7;
-            var placeY = 0.52 + (P.n + 1) * BS + 0.55;
-            var px = P.x + P.off.x, pz = P.z;
-            var box = A.box;
+        function stepArm(A, dt) {
+            var o = A.tool, J = A.job, TO = A.TO, VM = 3.0, AM = 7, p;
             A.tm += dt;
-            function lost() {
-                if (box && box.x > A.bx + 1.7) { box.claimed = -1; A.box = null; A.st = 'wait'; A.tm = 0; return true; }
-                return false;
-            }
             switch (A.st) {
-                case 'wait':
-                    approach3(o, A.home.x, A.home.y, A.home.z, dt, VM, AM);
-                    if (P.st !== 'idle' || P.n >= 3) break;
-                    for (var i = 0; i < boxes.length; i++) {
-                        var b = boxes[i];
-                        if (b.s !== 'belt' || b.claimed >= 0 || b.id % 2 !== ai) continue;
-                        if (b.x > A.bx - 3.4 && b.x < A.bx - 0.5) { b.claimed = ai; A.box = b; A.st = 'approach'; A.tm = 0; break; }
-                    }
-                    break;
-                case 'approach':
-                    if (lost()) break;
-                    if (approach3(o, box.x, gripY + 0.9, 0, dt, VM, AM, V, 0, 0)) { A.st = 'descend'; A.tm = 0; }
-                    break;
-                case 'descend':
-                    if (lost()) break;
-                    if (approach3(o, box.x, gripY, 0, dt, VM * 0.45, AM * 0.6, V, 0, 0)) { A.st = 'grip'; A.tm = 0; }
-                    break;
+                case 'idle':
+                    if ((p = J.pick())) { A.tgt = p; go(A, 'toPick'); break; }
+                    cylMove(A, A.home.x, A.home.y, A.home.z, dt); break;
+                case 'toPick':
+                    if (cylMove(A, A.tgt.x, A.tgt.y + TO + 0.8, A.tgt.z, dt)) go(A, 'pickDown'); break;
+                case 'pickDown':
+                    if (approach3(o, A.tgt.x, A.tgt.y + TO, A.tgt.z, dt, VM * 0.45, AM * 0.6)) go(A, 'grip'); break;
                 case 'grip':
-                    approach3(o, box.x, gripY, 0, dt, VM, AM, V, 0, 0);
-                    A.grip = Math.min(1, A.grip + dt / 0.3);
-                    if (A.grip >= 1) { box.s = 'held'; A.yaw0 = A.yaw; A.liftX = o.x + V * 0.2; A.st = 'lift'; A.tm = 0; }
+                    A.grip = Math.min(1, A.grip + dt / 0.28);
+                    if (A.grip >= 1) { J.picked(); A.held.visible = true; go(A, 'pickUp'); }
                     break;
-                case 'lift':
-                    if (approach3(o, A.liftX, gripY + 1.4, 0, dt, VM * 0.7, AM)) { cylInit(A); A.st = 'swing'; A.tm = 0; }
+                case 'pickUp':
+                    if (approach3(o, A.tgt.x, A.tgt.y + TO + 0.8, A.tgt.z, dt, VM * 0.6, AM)) { if (J.lifted) J.lifted(); go(A, 'carry'); }
                     break;
-                case 'swing':
-                    if (cylMove(A, px, placeY + 1.0, pz, dt)) { A.st = 'place'; A.tm = 0; }
-                    break;
-                case 'place':
-                    if (approach3(o, px, placeY, pz, dt, VM * 0.3, AM * 0.5)) { A.st = 'release'; A.tm = 0; }
-                    break;
+                case 'carry':
+                    if ((p = J.place())) { A.tgt = p; go(A, 'toPlace'); break; }
+                    cylMove(A, A.ready.x, A.ready.y, A.ready.z, dt); break;
+                case 'toPlace':
+                    if (cylMove(A, A.tgt.x, A.tgt.y + TO + 0.8, A.tgt.z, dt)) go(A, 'placeDown'); break;
+                case 'placeDown':
+                    if (approach3(o, A.tgt.x, A.tgt.y + TO, A.tgt.z, dt, VM * 0.35, AM * 0.5)) go(A, 'release'); break;
                 case 'release':
-                    A.grip = Math.max(0, A.grip - dt / 0.3);
-                    if (A.grip <= 0) {
-                        box.s = 'pallet'; box.px = box.m.position.x - px; box.py = box.m.position.y; box.pz = box.m.position.z - pz;
-                        P.boxes.push(box); P.n++; A.box = null; A.st = 'retreat'; A.tm = 0;
-                    }
+                    A.grip = Math.max(0, A.grip - dt / 0.28);
+                    if (A.grip <= 0) { A.held.visible = false; J.placed(); go(A, 'placeUp'); }
                     break;
-                case 'retreat':
-                    if (approach3(o, px, placeY + 0.9, pz, dt, VM * 0.6, AM)) { cylInit(A); A.st = 'return'; A.tm = 0; }
-                    break;
-                case 'return':
-                    if (cylMove(A, A.home.x, A.home.y, A.home.z, dt)) {
-                        if (P.n >= 3) P.st = 'out';                // full pallet → AGV drives it away
-                        A.st = 'wait'; A.tm = 0;
-                    }
-                    break;
+                case 'placeUp':
+                    if (approach3(o, A.tgt.x, A.tgt.y + TO + 0.8, A.tgt.z, dt, VM * 0.6, AM)) go(A, 'idle'); break;
             }
-            if (A.tm > 10 && A.st !== 'wait') {                      // watchdog
-                if (A.box && A.box.s !== 'held') A.box.claimed = -1;
-                if (A.box && A.box.s === 'held') { A.box.s = 'free'; A.box.m.visible = false; }
-                A.box = null; A.grip = 0; A.st = 'wait'; A.tm = 0;
-            }
-            // AGV with pallet
-            if (P.st === 'out' && approach1(P.off, -A.dir * 7, dt, 2.2, 1.2, 0.02)) {
-                P.boxes.forEach(function (bb) { bb.s = 'free'; bb.m.visible = false; }); P.boxes = []; P.n = 0; P.st = 'in';
-            } else if (P.st === 'in' && approach1(P.off, 0, dt, 2.2, 1.2, 0.02)) P.st = 'idle';
-            P.grp.position.x = P.x + P.off.x;
-            P.boxes.forEach(function (bb) { bb.m.position.set(P.x + P.off.x + bb.px, bb.py, P.z + bb.pz); });
         }
-
-        var ST_TXT = { wait: 'READY', approach: 'TRACKING', descend: 'TRACKING', grip: 'GRIP', lift: 'LIFT', swing: 'MOVE', place: 'PLACE', release: 'RELEASE', retreat: 'RETRACT', 'return': 'RETURN' };
         function poseArm(A) {
             var o = A.tool, dx = o.x - A.bx, dz = o.z - BZ;
             var yaw = Math.atan2(-dz, dx), rho = Math.hypot(dx, dz), h = o.y - SHY;
@@ -711,16 +768,271 @@
             var c2 = (d * d - L1 * L1 - L2 * L2) / (2 * L1 * L2);
             var a2 = -Math.acos(clamp(c2, -1, 1));
             var a1 = Math.atan2(h, rho) - Math.atan2(L2 * Math.sin(a2), L1 + L2 * Math.cos(a2));
-            A.yaw = yaw;
             A.yawG.rotation.y = yaw; A.sh.rotation.z = a1; A.el.rotation.z = a2; A.wr.rotation.z = -(a1 + a2);
-            var gw = 0.72 - 0.25 * A.grip;
-            A.fingers[0].position.x = -gw; A.fingers[1].position.x = gw;
-            if (A.box && A.box.s === 'held') { A.box.m.position.set(o.x, o.y - 0.55 - BS / 2, o.z); A.box.m.rotation.y = yaw - A.yaw0; }
-            if (tick) {
-                A.lbl.set('J1 ' + (yaw * 57.3).toFixed(0) + '° J2 ' + (a1 * 57.3).toFixed(0) + '° J3 ' + (a2 * 57.3).toFixed(0) + '° · ' + ST_TXT[A.st]);
-                A.plbl.set(A.pal.st === 'idle' ? 'PALLET ' + A.pal.n + '/3' : 'AGV · DISPATCH');
-                A.plbl.sprite.position.x = A.pal.x + A.pal.off.x;
+            A.j6.rotation.y = -yaw;
+            if (A.fingers.length) { var gw = 0.62 - 0.17 * A.grip; A.fingers[0].position.z = -gw; A.fingers[1].position.z = gw; }
+            if (A.vac) kit.op(A.vac.material, 0.85 * A.grip);
+            if (A.held.visible) A.held.position.set(o.x, o.y - A.TO - PART[A.job.part].hi, o.z);
+        }
+
+        /* ---------- infeed tables ---------- */
+        function buildFeeder(x, z, part, n, pitch) {
+            var F = { x: x, z: z, n: n, items: [], topY: FT + (n - 1) * pitch + (PART[part].hi - PART[part].lo) };
+            var tbl = meshE(new T.BoxGeometry(1.6, FT, 1.25), mFrame, lAmberS); tbl.position.set(x, FT / 2, z); g.add(tbl);
+            for (var k = 0; k < n; k++) { var it = mkPart(part); it.position.set(x, FT + k * pitch - PART[part].lo, z); g.add(it); F.items.push(it); }
+            return F;
+        }
+        function carrierTop(C, part) { return { x: C.g.position.x, y: C.g.position.y + PT + PART[part].hi, z: CZ }; }
+        function feederJob(F, m, part) {
+            return {
+                part: part,
+                pick: function () { return { x: F.x, y: F.topY, z: F.z }; },
+                picked: function () { F.items[F.n - 1].visible = false; },
+                place: function () { var C = slotC(m); return (LN.st === 'dwell' && !ST[m].done && C.stage === NEED[m]) ? carrierTop(C, part) : null; },
+                placed: function () { var C = slotC(m); C.stage = NEED[m] + 1; F.items[F.n - 1].visible = true; ST[m].done = true; }
+            };
+        }
+        var FZ = -1.9;
+        var feeders = [buildFeeder(SX[0] - 2.5, FZ, 'base', 3, 0.3), buildFeeder(SX[1] - 2.5, FZ, 'pcb', 6, 0.09), buildFeeder(SX[3] - 2.5, FZ, 'lid', 3, 0.14)];
+
+        /* ---------- AGVs (mecanum, so they translate without turning) ---------- */
+        var DOCK = { x: SX[5], z: -6.6 }, PALTOP = 0.52;
+        var PSLOT = [[-0.62, -0.45], [0.62, -0.45], [-0.62, 0.45], [0.62, 0.45]];
+        var ROUTE = [[0, 0], [9.5, 0], [9.5, -2.3], [-5.6, -2.3], [-5.6, 0], [0, 0]], RL = [0];
+        for (var ri = 1; ri < ROUTE.length; ri++) RL.push(RL[ri - 1] + Math.abs(ROUTE[ri][0] - ROUTE[ri - 1][0]) + Math.abs(ROUTE[ri][1] - ROUTE[ri - 1][1]));
+        var U_STANDBY = RL[4], U_END = RL[5], U_DELIVER = RL[2];
+        var mAgv = kit.solid(0x111827, 0.96, 0.1), mPallet = kit.solid(0x8b5a2b, 0.95, 0.12, 0.05), gWheel = new T.CylinderGeometry(0.22, 0.22, 0.16, 12);
+        function buildAgv(u, st) {
+            var V2 = { grp: new T.Group(), units: [], n: 0, u: { x: u, v: 0, a: 0 }, st: st };
+            var body = meshE(new T.BoxGeometry(2.8, 0.3, 2.2), mAgv, lCyan); body.position.y = 0.2; V2.grp.add(body);
+            [[-1.1, -1.1], [1.1, -1.1], [1.1, 1.1], [-1.1, 1.1]].forEach(function (p) { var w = new T.Mesh(gWheel, mJoint); w.rotation.x = Math.PI / 2; w.position.set(p[0], 0.2, p[1]); V2.grp.add(w); });
+            var pal = meshE(new T.BoxGeometry(2.6, 0.17, 2.0), mPallet, lAmber); pal.position.y = 0.435; V2.grp.add(pal);
+            V2.beacon = glowSprite(kit, COL.amber, 0.8, 0.6); V2.beacon.position.set(1.25, 0.6, 0.95); V2.grp.add(V2.beacon);
+            for (var k = 0; k < 4; k++) { var un = mkPart('unit'); un.position.set(PSLOT[k][0], PALTOP, PSLOT[k][1]); un.visible = false; V2.grp.add(un); V2.units.push(un); }
+            V2.lbl = new Label(kit, COL.amber, 0.45); V2.lbl.sprite.position.y = 1.8; V2.grp.add(V2.lbl.sprite);
+            g.add(V2.grp);
+            return V2;
+        }
+        var agvs = [buildAgv(0, 'dock'), buildAgv(U_STANDBY, 'standby')];
+        function docked() { for (var k = 0; k < agvs.length; k++) if (agvs[k].st === 'dock') return agvs[k]; return null; }
+        function routeAt(u) {
+            for (var k = 1; k < ROUTE.length; k++) if (u <= RL[k] || k === ROUTE.length - 1) {
+                var f = RL[k] > RL[k - 1] ? clamp((u - RL[k - 1]) / (RL[k] - RL[k - 1]), 0, 1) : 0;
+                return [ROUTE[k - 1][0] + (ROUTE[k][0] - ROUTE[k - 1][0]) * f, ROUTE[k - 1][1] + (ROUTE[k][1] - ROUTE[k - 1][1]) * f];
             }
+        }
+        function stepAgv(V2, dt) {
+            switch (V2.st) {
+                case 'dock': if (V2.n >= 4) V2.st = 'go'; break;
+                case 'go':
+                    if (V2.n && V2.u.x > U_DELIVER) { V2.n = 0; V2.units.forEach(function (un) { un.visible = false; }); }   // delivered to the warehouse
+                    if (approach1(V2.u, U_STANDBY, dt, 3.6, 2.4, 0.02)) V2.st = 'standby';
+                    break;
+                case 'standby': if (!agvs.some(function (o2) { return o2 !== V2 && (o2.st === 'dock' || o2.st === 'enter'); })) V2.st = 'enter'; break;
+                case 'enter': if (approach1(V2.u, U_END, dt, 3.6, 2.4, 0.02)) { V2.u.x = 0; V2.u.v = 0; V2.st = 'dock'; } break;
+            }
+            var q = routeAt(V2.u.x);
+            V2.grp.position.set(DOCK.x + q[0], 0, DOCK.z + q[1]);
+            kit.op(V2.beacon.material, V2.st === 'go' || V2.st === 'enter' ? (Math.sin(t * 12) > 0 ? 0.95 : 0.15) : 0.35);
+            if (tick) V2.lbl.set(V2.st === 'dock' ? 'AGV · LOADING ' + V2.n + '/4' : V2.st === 'standby' ? 'AGV · STANDBY' : 'AGV · ' + (V2.n ? 'TO WAREHOUSE' : 'RETURNING'));
+        }
+        var unloadJob = {
+            part: 'unit',
+            pick: function () { var C = slotC(5); return (LN.st === 'dwell' && !ST[5].done && C.stage === 5) ? carrierTop(C, 'unit') : null; },
+            picked: function () { var C = slotC(5); C.stage = 0; C.qc = false; },
+            lifted: function () { ST[5].done = true; },
+            place: function () { var V2 = docked(); return (V2 && V2.n < 4) ? { x: DOCK.x + PSLOT[V2.n][0], y: PALTOP + PART.unit.hi, z: DOCK.z + PSLOT[V2.n][1] } : null; },
+            placed: function () { var V2 = docked(); if (V2) { V2.units[V2.n].visible = true; V2.n++; } LN.out++; }
+        };
+
+        var arms = [
+            buildArm(SX[0], 'grip', feederJob(feeders[0], 0, 'base'), { x: SX[0] - 2.3, y: 3.4, z: -1.3 }, { x: SX[0], y: 3.6, z: -0.7 }),
+            buildArm(SX[1], 'vac', feederJob(feeders[1], 1, 'pcb'), { x: SX[1] - 2.3, y: 3.4, z: -1.3 }, { x: SX[1], y: 3.6, z: -0.7 }),
+            buildArm(SX[3], 'vac', feederJob(feeders[2], 3, 'lid'), { x: SX[3] - 2.3, y: 3.4, z: -1.3 }, { x: SX[3], y: 3.6, z: -0.7 }),
+            buildArm(SX[5], 'grip', unloadJob, { x: SX[5], y: 3.6, z: -0.8 }, { x: DOCK.x, y: 3.4, z: -5.0 })
+        ];
+        var armStation = [0, 1, 3, 5];
+
+        /* ---------- XYZ gantries: screwdriving (03) and laser welding (05) ---------- */
+        var GH = 4.3;
+        function buildGantry(x, col) {
+            var G = { x: x, hx: { x: x, v: 0, a: 0 }, hz: { x: 0, v: 0, a: 0 }, hy: { x: TOPY + PT + 1.4, v: 0, a: 0 }, st: 'home', tm: 0 };
+            var postGeo = new T.BoxGeometry(0.14, GH, 0.14), lc = kit.line(col, 0.8);
+            [[-1, -1.2], [1, -1.2], [-1, 1.2], [1, 1.2]].forEach(function (p) { var m = meshE(postGeo, mFrame, lCyanS); m.position.set(x + p[0], GH / 2, CZ + p[1]); g.add(m); });
+            [-1.2, 1.2].forEach(function (z) { var r = new T.Mesh(new T.BoxGeometry(2.14, 0.12, 0.12), mRail); r.position.set(x, GH, CZ + z); g.add(r); });
+            G.bridge = meshE(new T.BoxGeometry(0.2, 0.16, 2.5), mDark, lc); G.bridge.position.y = GH + 0.12; g.add(G.bridge);
+            G.car = meshE(new T.BoxGeometry(0.42, 0.42, 0.36), mDark, lc); g.add(G.car);
+            var spGeo = new T.CylinderGeometry(0.06, 0.06, 1, 10); spGeo.translate(0, 0.5, 0);
+            G.sp = new T.Mesh(spGeo, mJoint); g.add(G.sp);
+            G.tip = new T.Group(); g.add(G.tip);
+            G.set = function () {
+                G.bridge.position.x = G.hx.x;
+                G.car.position.set(G.hx.x, GH - 0.1, G.hz.x);
+                G.sp.position.set(G.hx.x, G.hy.x + 0.22, G.hz.x); G.sp.scale.y = Math.max(0.01, GH - 0.3 - G.hy.x - 0.22);
+                G.tip.position.set(G.hx.x, G.hy.x, G.hz.x);
+            };
+            G.home = function (dt) {
+                var a = approach1(G.hx, x, dt, 3, 14, 0.005), b = approach1(G.hz, 0, dt, 3, 14, 0.005), c = approach1(G.hy, TOPY + PT + 1.4, dt, 3, 14, 0.005);
+                return a && b && c;
+            };
+            G.lbl = col;
+            return G;
+        }
+        // screwdriver
+        var SCR = buildGantry(SX[2], COL.cyan);
+        var bit = new T.Mesh(new T.CylinderGeometry(0.04, 0.02, 0.22, 6), mRail); bit.position.y = 0.11; SCR.tip.add(bit);
+        var scrGlow = glowSprite(kit, COL.cyan, 0.9, 0); SCR.tip.add(scrGlow);
+        function stepScrew(dt) {
+            var C = slotC(2), py = TOPY + PT, cx = C.g.position.x, spin = 0, S2 = SCR;
+            var active = LN.st === 'dwell' && !ST[2].done && C.stage === 2;
+            switch (S2.st) {
+                case 'home': S2.home(dt); if (active) S2.st = 'move'; break;
+                case 'move':
+                    var a = approach1(S2.hx, cx + SCREW_XZ[C.nScrew][0], dt, 3, 14, 0.004);
+                    var b = approach1(S2.hz, CZ + SCREW_XZ[C.nScrew][1], dt, 3, 14, 0.004);
+                    var c = approach1(S2.hy, py + 0.75, dt, 3, 14, 0.004);
+                    if (a && b && c) S2.st = 'down';
+                    break;
+                case 'down':
+                    if (approach1(S2.hy, py + 0.5, dt, 2.2, 12, 0.004)) { S2.cur = C.nScrew; C.nScrew++; S2.st = 'drive'; S2.tm = 0; }
+                    break;
+                case 'drive':                                     // screw spins down 8 mm and seats
+                    S2.tm += dt; var k = Math.min(1, S2.tm / 0.5);
+                    C.screws[S2.cur].position.y = 0.385 + 0.08 * (1 - k);
+                    S2.hy.x = py + 0.42 + 0.08 * (1 - k); S2.hy.v = 0; spin = 1;
+                    if (k >= 1) S2.st = 'up';
+                    break;
+                case 'up':
+                    if (approach1(S2.hy, py + 0.75, dt, 3, 14, 0.004)) {
+                        if (C.nScrew >= 4) { C.stage = 3; C.nScrew = 0; ST[2].done = true; S2.st = 'home'; } else S2.st = 'move';
+                    }
+                    break;
+            }
+            bit.rotation.y += spin * 40 * dt;
+            kit.op(scrGlow.material, spin ? rand(0.5, 0.95) : 0);
+            SCR.set();
+        }
+        // laser welder
+        var LAS = buildGantry(SX[4], COL.orange);
+        var noz = new T.Mesh(new T.ConeGeometry(0.11, 0.26, 12), mTurret); noz.rotation.x = Math.PI; noz.position.y = 0.13; LAS.tip.add(noz);
+        var beamGeo = new T.CylinderGeometry(0.03, 0.03, 1, 6); beamGeo.translate(0, -0.5, 0);
+        var beam = new T.Mesh(beamGeo, kit.glass(0xff8a3d, 0.85, true)); LAS.tip.add(beam);
+        var lasDot = glowSprite(kit, 0xffe0b0, 1.8, 0); g.add(lasDot);
+        var lasLight = kit.light(new T.PointLight(0xff9a40, 0, 10, 2)); g.add(lasLight);
+        var seamDyn = dynLine(8, kit.line(0xffe9c4, 1, true), false); g.add(seamDyn);
+        var SPK = particles(kit, 180, 0.22); g.add(SPK.obj);
+        var sparks = [];
+        function emit(ex, ey, ez, n) {
+            for (var q = 0; q < n; q++) {
+                var sp = rand(1.5, 4.5), life = rand(0.3, 0.9);
+                sparks.push({ x: ex, y: ey, z: ez, vx: rand(-1, 1) * sp * 0.7, vy: rand(0.1, 1) * sp, vz: rand(-1, 1) * sp * 0.7, life: life, max: life });
+            }
+            if (sparks.length > 180) sparks.splice(0, sparks.length - 180);
+        }
+        function seamPoint(d, out) {               // point at distance d along the seam loop
+            for (var k = 0; k < 4; k++) {
+                var ax = SEAM[k][0], az = SEAM[k][1], bx = SEAM[k + 1][0], bz = SEAM[k + 1][1], sl = Math.abs(bx - ax) + Math.abs(bz - az);
+                if (d <= sl || k === 3) { var f = clamp(d / sl, 0, 1); out[0] = ax + (bx - ax) * f; out[1] = az + (bz - az) * f; return k; }
+                d -= sl;
+            }
+        }
+        var _sp = [0, 0];
+        function stepLaser(dt) {
+            var C = slotC(4), py = TOPY + PT, cx = C.g.position.x, top = py + PART.lid.hi, welding = false, L3 = LAS;
+            var active = LN.st === 'dwell' && !ST[4].done && C.stage === 4;
+            switch (L3.st) {
+                case 'home': L3.home(dt); if (active) L3.st = 'move'; break;
+                case 'move':
+                    var a = approach1(L3.hx, cx + SEAM[0][0], dt, 3, 14, 0.004), b = approach1(L3.hz, CZ + SEAM[0][1], dt, 3, 14, 0.004), c = approach1(L3.hy, top + 0.55, dt, 3, 14, 0.004);
+                    if (a && b && c) { L3.st = 'weld'; L3.tm = 0; }
+                    break;
+                case 'weld':
+                    L3.tm += dt; var u = Math.min(1, L3.tm / 2.6), seg = seamPoint(u * SEAM_LEN, _sp);
+                    L3.hx.x = cx + _sp[0]; L3.hz.x = CZ + _sp[1]; L3.hx.v = L3.hz.v = 0; welding = true;
+                    var arr = seamDyn.geometry.attributes.position.array, n = 0;
+                    for (var k = 0; k <= seg; k++) { arr[n * 3] = cx + SEAM[k][0]; arr[n * 3 + 1] = top + 0.005; arr[n * 3 + 2] = CZ + SEAM[k][1]; n++; }
+                    arr[n * 3] = L3.hx.x; arr[n * 3 + 1] = top + 0.005; arr[n * 3 + 2] = L3.hz.x; n++;
+                    seamDyn.geometry.setDrawRange(0, n); seamDyn.geometry.attributes.position.needsUpdate = true;
+                    if (Math.random() < dt * 45) emit(L3.hx.x, top, L3.hz.x, 2 + (Math.random() * 3 | 0));
+                    if (u >= 1) { C.stage = 5; ST[4].done = true; L3.st = 'up'; }
+                    break;
+                case 'up': if (approach1(L3.hy, top + 1.2, dt, 3, 14, 0.004)) L3.st = 'home'; break;
+            }
+            seamDyn.visible = welding;
+            beam.visible = welding; beam.scale.y = Math.max(0.01, L3.hy.x - top);
+            if (welding) {
+                lasDot.position.set(L3.hx.x, top + 0.02, L3.hz.x); kit.op(lasDot.material, rand(0.6, 1));
+                lasLight.position.set(L3.hx.x, top + 0.5, L3.hz.x + 0.6); kit.lightI(lasLight, rand(1.4, 2.4));
+            } else { kit.op(lasDot.material, 0); kit.lightI(lasLight, 0); }
+            for (var s = sparks.length - 1; s >= 0; s--) {
+                var p = sparks[s];
+                p.life -= dt;
+                if (p.life <= 0) { sparks.splice(s, 1); continue; }
+                var dr = Math.exp(-1.3 * dt);
+                p.vx *= dr; p.vz *= dr; p.vy = p.vy * dr - 9.81 * dt;
+                p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+                var floor = Math.abs(p.z - CZ) < 0.6 ? TOPY : 0.02;
+                if (p.y < floor) { p.y = floor; p.vy *= -0.3; p.vx *= 0.5; p.vz *= 0.5; }
+            }
+            for (var s3 = 0; s3 < SPK.n; s3++) {
+                if (s3 >= sparks.length) { SPK.hide(s3); continue; }
+                var sp2 = sparks[s3], kk = sp2.life / sp2.max;
+                _c.setRGB(1, 0.45 + 0.5 * kk, 0.12 + 0.7 * kk * kk);
+                SPK.set(s3, sp2.x, sp2.y, sp2.z, _c, Math.min(1, kk * 1.6));
+            }
+            SPK.flush();
+            LAS.set();
+        }
+
+        /* ---------- vision QC arch between weld and unload ---------- */
+        var VX = (SX[4] + SX[5]) / 2, VH = 3.3;
+        [-1.25, 1.25].forEach(function (z) { var p = meshE(new T.BoxGeometry(0.16, VH, 0.16), mFrame, lCyanS); p.position.set(VX, VH / 2, CZ + z); g.add(p); });
+        var vBeam = meshE(new T.BoxGeometry(0.22, 0.22, 2.7), mDark, lCyan); vBeam.position.set(VX, VH, CZ); g.add(vBeam);
+        var cam = meshE(new T.BoxGeometry(0.5, 0.4, 0.55), mDark, lCyan); cam.position.set(VX, VH - 0.3, CZ); g.add(cam);
+        var lens = new T.Mesh(new T.CylinderGeometry(0.13, 0.16, 0.18, 14), mJoint); lens.position.set(VX, VH - 0.58, CZ); g.add(lens);
+        var fanMat = kit.glass(COL.cyan, 0.04, true);
+        var fan = new T.Mesh(new T.ConeGeometry(1.1, VH - 0.7 - TOPY, 4, 1, true), fanMat); fan.rotation.y = Math.PI / 4;
+        fan.scale.set(0.35, 1, 1); fan.position.set(VX, (VH - 0.67 + TOPY) / 2, CZ); g.add(fan);
+        var scanBar = new T.Mesh(new T.BoxGeometry(0.04, 0.02, 1.0), kit.glass(COL.cyan, 0, true)); g.add(scanBar);
+        var qcLbl = new Label(kit, COL.green, 0.45); qcLbl.sprite.position.set(VX, VH + 0.55, CZ); g.add(qcLbl.sprite);
+        function stepVision(dt) {
+            var scan = null;
+            carriers.forEach(function (C) {
+                if (C.lane !== 0 || C.stage !== 5) return;
+                var dx = C.g.position.x - VX;
+                if (Math.abs(dx) < 0.8) scan = C;
+                if (dx > 0 && dx < 1.5 && !C.qc) { C.qc = true; C.flash = 1; LN.qc++; }
+            });
+            kit.op(fanMat, scan ? 0.16 + 0.06 * Math.sin(t * 30) : 0.035);
+            if (scan) {
+                var top = TOPY + PT + PART.unit.hi + 0.01;
+                scanBar.position.set(scan.g.position.x + 0.5 * Math.sin(t * 9), top, CZ);
+                kit.op(scanBar.material, 0.9);
+            } else kit.op(scanBar.material, 0);
+            carriers.forEach(function (C) {
+                if (C.flash > 0) C.flash = Math.max(0, C.flash - dt / 1.2);
+                kit.op(C.tag.material, C.stage === 5 ? 0.9 * C.flash : 0);
+            });
+            if (tick) qcLbl.set('QC VISION · PASS ' + LN.qc + '/' + LN.qc);
+        }
+
+        /* ---------- labels ---------- */
+        var SNAME = ['01 LOAD', '02 PCB INSERT', '03 SCREW ×4', '04 LID', '05 LASER WELD', '06 UNLOAD'];
+        var slbl = SX.map(function (x) { var l = new Label(kit, COL.cyan, 0.46); l.sprite.position.set(x, 5.6, -1.4); g.add(l.sprite); return l; });
+        var ARM_TXT = { idle: 'READY', toPick: 'PICK', pickDown: 'PICK', grip: 'GRIP', pickUp: 'LIFT', carry: 'WAIT', toPlace: 'MOVE', placeDown: 'PLACE', release: 'RELEASE', placeUp: 'RETRACT' };
+        var GAN_TXT = { home: 'READY', move: 'MOVE', down: 'FEED', drive: 'DRIVE', up: 'RETRACT', weld: 'WELDING' };
+        var lineLbl = new Label(kit, COL.amber, 0.6, 'left'); lineLbl.sprite.position.set(-HALF + 0.2, 0.2, 2.2); g.add(lineLbl.sprite);
+        var lineLbl2 = new Label(kit, COL.amber, 0.6, 'left'); lineLbl2.sprite.position.set(1.5, 0.2, 2.2); g.add(lineLbl2.sprite);
+        function updateLabels() {
+            arms.forEach(function (A, k) {
+                var m = armStation[k], s = ARM_TXT[A.st];
+                if (A.vac && (A.st === 'grip' || A.st === 'pickUp' || A.st === 'carry' || A.st === 'toPlace' || A.st === 'placeDown')) s = 'VAC ON · ' + s;
+                slbl[m].set(SNAME[m] + ' · ' + s);
+            });
+            slbl[2].set(SNAME[2] + ' · ' + (SCR.st === 'home' ? 'READY' : GAN_TXT[SCR.st] + ' ' + Math.min(4, slotC(2).nScrew) + '/4'));
+            slbl[4].set(SNAME[4] + ' · ' + GAN_TXT[LAS.st]);
+            lineLbl.set('LINE A1 · ' + NC + ' CARRIERS · ' + (LN.st === 'index' ? 'INDEXING ▶' : 'DWELL'));
+            lineLbl2.set('CYCLE ' + (LN.last ? LN.last.toFixed(1) : '--') + ' s · OUTPUT ' + LN.out + ' u');
         }
 
         /* --- Drones --- */
@@ -745,17 +1057,17 @@
         }
         var drones = [buildDrone(1, 0), buildDrone(0.75, 0.5)];
         var droneLbl = new Label(kit, COL.cyan, 0.65); g.add(droneLbl.sprite);
-        var PATHS = [{ cx: 0, cy: 8.6, cz: 1, ax: 12, wx: 0.22, az: 3, wz: 0.31, ph: 0 }, { cx: 1, cy: 6.2, cz: -4.5, ax: 9, wx: 0.17, az: 2.4, wz: 0.4, ph: 2.4 }];
+        var PATHS = [{ cx: 0, cy: 9.2, cz: 1, ax: 12, wx: 0.22, az: 3, wz: 0.31, ph: 0 }, { cx: 1, cy: 7.0, cz: -4.5, ax: 9, wx: 0.17, az: 2.4, wz: 0.4, ph: 2.4 }];
 
         /* --- PCB backdrop --- */
-        var pcb = new T.Group(); pcb.position.set(0, 6.5, -9.5); g.add(pcb);
-        pcb.add(meshE(new T.PlaneGeometry(44, 12), kit.glass(0x0f3d2e, 0.14), kit.line(COL.amber, 0.3)));
+        var pcb = new T.Group(); pcb.position.set(0, 6.8, -11.5); g.add(pcb);
+        pcb.add(meshE(new T.PlaneGeometry(48, 12), kit.glass(0x0f3d2e, 0.14), kit.line(COL.amber, 0.3)));
         var traces = [], tp = [];
         for (var tr = 0; tr < 16; tr++) {
-            var x0 = rand(-21, 21), y0 = rand(-5.4, 5.4), pts = [[x0, y0]], len = 0;
+            var x0 = rand(-23, 23), y0 = rand(-5.4, 5.4), pts = [[x0, y0]], len = 0;
             for (var sg = 0; sg < 4; sg++) {
                 var last = pts[pts.length - 1], horiz = sg % 2 === 0;
-                var nx = horiz ? clamp(last[0] + rand(-7, 7), -21.5, 21.5) : last[0], ny = horiz ? last[1] : clamp(last[1] + rand(-3, 3), -5.6, 5.6);
+                var nx = horiz ? clamp(last[0] + rand(-7, 7), -23.5, 23.5) : last[0], ny = horiz ? last[1] : clamp(last[1] + rand(-3, 3), -5.6, 5.6);
                 pts.push([nx, ny]); len += Math.abs(nx - last[0]) + Math.abs(ny - last[1]);
                 tp.push(last[0], last[1], 0.02, nx, ny, 0.02);
             }
@@ -769,19 +1081,32 @@
         }
 
         function update(dt) {
-            /* belt */
-            beltPos += V * dt; beltDist += V * dt;
-            for (var i = 0; i < cleats.length; i++) cleats[i].position.x = ((i + beltPos) % (HALF * 2)) - HALF;
-            rollers.forEach(function (r) { r.rotation.y = -beltPos / 0.32; });
-            for (var j = 0; j < boxes.length; j++) {
-                var b = boxes[j];
-                if (b.s !== 'belt') continue;
-                b.x += V * dt; b.m.position.x = b.x;
-                if (b.x > HALF - 0.5) { b.s = 'free'; b.m.visible = false; }
+            /* line indexing + carriers on the loop */
+            stepLine(dt);
+            var s0 = lineS();
+            carriers.forEach(function (C) {
+                pathAt(OFF + C.i * PITCH + s0, _p);
+                C.g.position.set(_p.x, _p.y, CZ); C.lane = _p.lane;
+                showStage(C);
+            });
+            for (var i = 0; i < cleatsT.length; i++) {
+                var u = ((i + s0) % (2 * HALF) + 2 * HALF) % (2 * HALF);
+                cleatsT[i].position.x = u - HALF; cleatsB[i].position.x = HALF - u;
             }
-            if (beltDist >= SPACING) { beltDist -= SPACING; spawn(-HALF + 0.5 + beltDist); }
-            /* arms */
-            arms.forEach(function (A, ai) { stepArm(A, ai, dt); poseArm(A); });
+            drums.forEach(function (d) { d.rotation.y = -s0 / 0.2; });
+            elevs.forEach(function (E) {
+                var on = null;
+                for (var k = 0; k < carriers.length; k++) if (carriers[k].lane === E.lane) { on = carriers[k]; break; }
+                if (on) { E.y.x = on.g.position.y; E.y.v = 0; } else approach1(E.y, E.rest, dt, 2.5, 8, 0.005);
+                E.plat.position.y = E.y.x - 0.03;
+            });
+            /* stations */
+            arms.forEach(function (A) { stepArm(A, dt); poseArm(A); });
+            stepScrew(dt);
+            stepLaser(dt);
+            stepVision(dt);
+            agvs.forEach(function (V2) { stepAgv(V2, dt); });
+            if (tick) updateLabels();
             /* drones: position on a smooth path, bank angle from the path's acceleration (a = g·tanθ) */
             drones.forEach(function (D, k) {
                 var p = PATHS[k], ph = p.ph;
@@ -804,7 +1129,7 @@
                 var dd = (t * tr2.sp + tr2.off) % tr2.len, acc = 0;
                 for (var k2 = 1; k2 < tr2.pts.length; k2++) {
                     var p0 = tr2.pts[k2 - 1], p1 = tr2.pts[k2], sl = Math.abs(p1[0] - p0[0]) + Math.abs(p1[1] - p0[1]);
-                    if (acc + sl >= dd) { var u = sl ? (dd - acc) / sl : 0; tr2.s.position.set(p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u, 0.05); break; }
+                    if (acc + sl >= dd) { var uu = sl ? (dd - acc) / sl : 0; tr2.s.position.set(p0[0] + (p1[0] - p0[0]) * uu, p0[1] + (p1[1] - p0[1]) * uu, 0.05); break; }
                     acc += sl;
                 }
             });
@@ -1014,7 +1339,7 @@
     // camera sweeps round the stage and re-frames for the new scene — the screen is never empty.
     var VIEWS = [
         { target: [-3, 12.5, 0], dist: 56, elev: 5, half: 27 },
-        { target: [0, 3.6, -1.5], dist: 27, elev: 6.5, half: 17 },
+        { target: [0, 3.0, -2.4], dist: 29, elev: 7.5, half: 19.5 },
         { target: [0, 7.5, -1], dist: 38, elev: 5, half: 24 }
     ];
     var camPos = new T.Vector3(), camTgt = new T.Vector3();
