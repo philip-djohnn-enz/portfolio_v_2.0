@@ -66,7 +66,7 @@
         o.a = dt ? dv / dt : 0;
         o.v += dv; o.x += o.v * dt;
         // settle: close enough and slow, or we just stepped across the target at low speed (big frame steps)
-        var crossed = (d > 0) !== (target - o.x > 0) && Math.abs(o.v) < amax * dt * 3 + amax * 0.05;
+        var crossed = (d > 0) !== (target - o.x > 0) && Math.abs(o.v) < amax * dt * 2;
         if ((Math.abs(target - o.x) < eps && Math.abs(o.v) < amax * 0.05) || crossed) { o.x = target; o.v = 0; o.a = 0; return true; }
         return false;
     }
@@ -348,6 +348,482 @@
         var qY = new T.Quaternion(), qT = new T.Quaternion(), eT = new T.Euler(), UP = new T.Vector3(0, 1, 0);
         var t0 = 0;
 
+
+        /* ================= SITE LIFE: lighting, A/C, fire protection, traffic, plant, people ================= */
+        var TAU = Math.PI * 2, FRONT = BZ + B / 2, ROOFY = MAXF * FH + 0.15, ROADZ = 12.1;
+        var LANE = { E: ROADZ - 1.0, W: ROADZ + 1.0 };
+        var cWarm = new T.Color(0xffe2a8), cRed = new T.Color(COL.red), cWater = new T.Color(0xa5e4ff), cSmoke = new T.Color(0x5b6474),
+            cFire = new T.Color(0xff7a2a), cSoil = new T.Color(0xb07a45), cCold = new T.Color(0x7fdcff), cHeat = new T.Color(0xffa45c);
+        var mRed = kit.solid(COL.red, 0.95, 0.45, 0.4), lRed = kit.line(COL.red, 0.9), mWhite = kit.solid(0xe5e7eb, 0.96, 0.25, 0.3);
+        var mDarkS = kit.solid(0x111827, 0.96, 0.1), mGrey = kit.solid(0x475569, 0.95, 0.1), lCyanS = kit.line(COL.cyan, 0.5), lAmberS = kit.line(COL.amber, 0.45);
+        function addMat(col, op, additive) {      // un-cached material, so it can be faded on its own
+            return kit.add(new T.MeshBasicMaterial({ color: col, opacity: op, transparent: true, depthWrite: false, side: T.DoubleSide, blending: additive ? T.AdditiveBlending : T.NormalBlending }));
+        }
+
+        /* --- extra risers: fire water (red) + refrigerant (copper) --- */
+        var fireRiser = new T.Mesh(rGeo, kit.solid(COL.red, 0.92, 0.5)); fireRiser.position.set(BX + B / 2 - 2.0, 0, RZ); fireRiser.visible = false; g.add(fireRiser);
+        var refRiser = new T.Mesh(rGeo, kit.solid(0xc77d43, 0.92, 0.35, 0.8)); refRiser.position.set(BX + B / 2 - 2.45, 0, RZ); refRiser.visible = false; g.add(refRiser);
+
+        /* --- per-floor fit-out: lights, A/C cassettes, sprinklers, hose cabinet, alarm strobe --- */
+        var panelGeo = new T.PlaneGeometry(1.9, 0.45), volGeo = new T.BoxGeometry(B - 0.3, FH - 0.45, B - 0.3);
+        var cassGeo = new T.BoxGeometry(1.0, 0.22, 1.0), cabGeo = new T.BoxGeometry(0.5, 0.7, 0.18);
+        var SPR = []; [BX - 3.1, BX + 3.1].forEach(function (x) { [BZ - 2.8, BZ - 0.2, BZ + 2.4].forEach(function (z) { SPR.push([x, z]); }); });
+        var CASS = [[BX, BZ - 2.4], [BX, BZ + 1.8]];
+        floors.forEach(function (fl, f) {
+            var ceil = (f + 1) * FH - 0.15;
+            fl.ceil = ceil; fl.lit = 0; fl.want = true; fl.onAt = -1; fl.warm = f % 3 !== 1;
+            fl.fit = new T.Group(); fl.fit.visible = false; g.add(fl.fit);
+            fl.panelMat = addMat(fl.warm ? 0xfff0cc : 0xe6f7ff, 0, true);
+            fl.volMat = addMat(fl.warm ? 0xffb35c : 0x7dd3fc, 0, true);
+            [BX - 1.6, BX + 1.6].forEach(function (x) { [BZ - 2.4, BZ, BZ + 2.4].forEach(function (z) { var p = new T.Mesh(panelGeo, fl.panelMat); p.rotation.x = Math.PI / 2; p.position.set(x, ceil - 0.02, z); fl.fit.add(p); }); });
+            var vol = new T.Mesh(volGeo, fl.volMat); vol.position.set(BX, f * FH + 0.15 + (FH - 0.45) / 2, BZ); fl.fit.add(vol);
+            var halo = glowSprite(kit, fl.warm ? 0xffc77a : 0x9be7ff, B * 1.5, 0); halo.position.set(BX, f * FH + 1.5, FRONT); fl.haloMat = halo.material; fl.fit.add(halo);
+            var py = ceil - 0.34, sp = [BX - 3.6, py, BZ - 0.2, BX + 3.6, py, BZ - 0.2];
+            [BX - 3.1, BX + 3.1].forEach(function (x) { sp.push(x, py, BZ - 2.8, x, py, BZ + 2.4); });
+            SPR.forEach(function (s) { sp.push(s[0], py, s[1], s[0], py - 0.14, s[1]); });
+            fl.fit.add(lines(sp, lRed));
+            CASS.forEach(function (c) { var m = meshE(cassGeo, mWhite, lCyanS); m.position.set(c[0], ceil - 0.13, c[1]); fl.fit.add(m); });
+            var cab = new T.Mesh(cabGeo, mRed); cab.position.set(BX - B / 2 + 0.5, f * FH + 1.2, FRONT + 0.05); fl.fit.add(cab);
+            fl.strobe = glowSprite(kit, COL.red, 1.8, 0); fl.strobe.position.set(BX + B / 2 + 0.25, f * FH + 2.3, FRONT + 0.3); fl.fit.add(fl.strobe);
+        });
+
+        /* --- roof: VRF outdoor units with fans, LED edge --- */
+        var roof = new T.Group(); roof.visible = false; g.add(roof);
+        var vrfFans = [], mFanB = kit.solid(COL.cyan, 0.9, 0.4, 0.5);
+        [BX - 2.4, BX, BX + 2.4].forEach(function (x) {
+            var u = meshE(new T.BoxGeometry(1.9, 1.5, 1.1), mWhite, lCyanS); u.position.set(x, ROOFY + 0.75, BZ - 2.8); roof.add(u);
+            var fg = new T.Group(); fg.position.set(x, ROOFY + 1.53, BZ - 2.8); roof.add(fg);
+            var rg = new T.Mesh(new T.TorusGeometry(0.44, 0.04, 6, 24), mDarkS); rg.rotation.x = Math.PI / 2; fg.add(rg);
+            for (var b3 = 0; b3 < 3; b3++) { var bl3 = new T.Mesh(new T.BoxGeometry(0.8, 0.03, 0.16), mFanB); bl3.rotation.y = b3 * Math.PI / 3; fg.add(bl3); }
+            vrfFans.push(fg);
+        });
+        var re = SW / 2, rp = [];
+        [[-re, -re, re, -re], [re, -re, re, re], [re, re, -re, re], [-re, re, -re, -re]].forEach(function (s) { rp.push(BX + s[0], ROOFY + 0.06, BZ + s[1], BX + s[2], ROOFY + 0.06, BZ + s[3]); });
+        roof.add(lines(rp, kit.line(COL.cyan, 0.95, true)));
+        var beacon = glowSprite(kit, COL.red, 1.6, 0.5); beacon.position.set(BX + re, ROOFY + 0.8, BZ + re); roof.add(beacon);
+        var vrfLbl = new Label(kit, COL.cyan, 1.0); vrfLbl.sprite.position.set(BX, ROOFY + 3.0, BZ - 2.8); roof.add(vrfLbl.sprite);
+
+        /* --- fire pump house + water tank --- */
+        var PHX = -27.5, PHZ = 1.5;
+        var ph = meshE(new T.BoxGeometry(4.2, 2.6, 3.2), kit.glass(COL.red, 0.06), lRed); ph.position.set(PHX, 1.3, PHZ); g.add(ph);
+        var pumpGeo = new T.CylinderGeometry(0.32, 0.32, 0.9, 14); pumpGeo.rotateZ(Math.PI / 2);
+        [-0.8, 0.8].forEach(function (dz) {
+            var mot = meshE(new T.BoxGeometry(0.9, 0.6, 0.6), mGrey, lRed); mot.position.set(PHX - 0.9, 0.5, PHZ + dz); g.add(mot);
+            var pmp = new T.Mesh(pumpGeo, mRed); pmp.position.set(PHX + 0.2, 0.5, PHZ + dz); g.add(pmp);
+        });
+        var pumpGlow = glowSprite(kit, COL.red, 3.5, 0); pumpGlow.position.set(PHX, 1.2, PHZ + 1.7); g.add(pumpGlow);
+        var tank = meshE(new T.CylinderGeometry(1.7, 1.7, 3.6, 24), kit.glass(COL.blue, 0.08), kit.line(COL.blue, 0.7)); tank.position.set(PHX, 1.8, PHZ - 4.6); g.add(tank);
+        var water = new T.Mesh(new T.CylinderGeometry(1.6, 1.6, 1, 24), kit.solid(COL.blue, 0.45, 0.4)); water.position.set(PHX, 0, PHZ - 4.6); g.add(water);
+        g.add(lines([PHX + 2.1, 0.35, PHZ, fireRiser.position.x, 0.35, PHZ, fireRiser.position.x, 0.35, PHZ, fireRiser.position.x, 0.35, RZ,
+            PHX, 0.35, PHZ - 2.8, PHX, 0.35, PHZ - 1.6], lRed));
+        var pumpLbl = new Label(kit, COL.red, 1.0); pumpLbl.sprite.position.set(PHX, 4.6, PHZ - 1.5); g.add(pumpLbl.sprite);
+
+        /* --- floodlight towers --- */
+        [[-33, 8, 1], [3, 9.2, 0], [30, 8.5, 1]].forEach(function (p) {
+            var mh = 11, mast = meshE(new T.BoxGeometry(0.3, mh, 0.3), mGrey, lAmberS); mast.position.set(p[0], mh / 2, p[1]); g.add(mast);
+            var head = meshE(new T.BoxGeometry(1.8, 0.5, 0.3), mDarkS, lAmberS); head.position.set(p[0], mh + 0.2, p[1]); g.add(head);
+            [-0.55, 0.55].forEach(function (dx) { var lg = glowSprite(kit, 0xfff4d6, 2.2, 0.95); lg.position.set(p[0] + dx, mh + 0.2, p[1] - 0.2); g.add(lg); });
+            var tgt = new T.Vector3(p[2] ? BX + 4 : 6, 0, p[2] ? BZ + 3 : 0), from = new T.Vector3(p[0], mh, p[1]);
+            var len = from.distanceTo(tgt) * 0.85, cg = new T.ConeGeometry(len * 0.26, len, 24, 1, true); cg.translate(0, -len / 2, 0); cg.rotateX(-Math.PI / 2);
+            var cone = new T.Mesh(cg, kit.glass(0xfff1c9, 0.022, true)); cone.position.copy(from); cone.lookAt(tgt); g.add(cone);
+        });
+
+        /* --- road + site fence --- */
+        var road = new T.Mesh(new T.PlaneGeometry(110, 4.3), kit.solid(0x0b1220, 0.92, 0.04, 0)); road.rotation.x = -Math.PI / 2; road.position.set(0, 0.02, ROADZ); g.add(road);
+        var rl = [-55, 0.04, ROADZ - 2.15, 55, 0.04, ROADZ - 2.15, -55, 0.04, ROADZ + 2.15, 55, 0.04, ROADZ + 2.15];
+        for (var dx0 = -55; dx0 < 55; dx0 += 3) rl.push(dx0, 0.04, ROADZ, dx0 + 1.5, 0.04, ROADZ);
+        g.add(lines(rl, kit.line(COL.amber, 0.5)));
+        var fz = ROADZ - 2.6, fp = [];
+        [[-50, -22], [-4, 15], [26, 50]].forEach(function (s) {
+            fp.push(s[0], 1.1, fz, s[1], 1.1, fz, s[0], 0.5, fz, s[1], 0.5, fz);
+            for (var x = s[0]; x <= s[1]; x += 2) fp.push(x, 0, fz, x, 1.2, fz);
+        });
+        g.add(lines(fp, kit.line(COL.amber, 0.28)));
+
+        /* --- particles: one system for flames/smoke (big), one for water/air/soil (small) --- */
+        var PBIG = particles(kit, 240, 0.7), PSM = particles(kit, 700, 0.24); g.add(PBIG.obj); g.add(PSM.obj);
+        var big = [], small = [];
+        function puff(list, cap, x, y, z, vx, vy, vz, life, col, grav, drag, floorY) {
+            list.push({ x: x, y: y, z: z, vx: vx, vy: vy, vz: vz, life: life, max: life, c: col, g: grav, d: drag, fy: floorY == null ? 0.02 : floorY });
+            if (list.length > cap) list.splice(0, list.length - cap);
+        }
+        function stepP(list, sys, dt, bright) {
+            for (var i = list.length - 1; i >= 0; i--) {
+                var p = list[i]; p.life -= dt;
+                if (p.life <= 0) { list.splice(i, 1); continue; }
+                var dr = Math.exp(-p.d * dt); p.vx *= dr; p.vz *= dr; p.vy = p.vy * dr - p.g * dt;
+                p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+                if (p.y < p.fy) { p.y = p.fy; p.vy = 0; p.vx *= 0.3; p.vz *= 0.3; if (p.g > 0) p.life = Math.min(p.life, 0.15); }
+            }
+            for (var j = 0; j < sys.n; j++) {
+                if (j >= list.length) { sys.hide(j); continue; }
+                var q = list[j], k = q.life / q.max;
+                sys.set(j, q.x, q.y, q.z, q.c, bright(q, k));
+            }
+            sys.flush();
+        }
+
+        /* --- vehicles --- */
+        var wheelGeo = new T.CylinderGeometry(0.48, 0.48, 0.36, 14); wheelGeo.rotateX(Math.PI / 2);
+        var mTyre = kit.solid(0x0b0f19, 0.97, 0.05), lTyre = kit.line(COL.white, 0.25);
+        function buildTruck(kind) {
+            var V = { kind: kind, g: new T.Group(), wheels: [], v: 0, x: 0, st: 'drive', tm: 0, served: false, load: 0 };
+            var col = { fire: COL.red, mixer: 0xe5e7eb, dump: COL.amber, van: COL.cyan, flatbed: 0x64748b }[kind];
+            var mBody = kit.solid(col, 0.96, 0.25, 0.4), lBody = kit.line(kind === 'fire' ? COL.white : COL.cyan, 0.6);
+            var L = kind === 'van' ? 4.8 : kind === 'fire' ? 8 : 7, cabL = 1.9, cabH = kind === 'van' ? 1.5 : 2.0;
+            V.len = L;
+            var ch = new T.Mesh(new T.BoxGeometry(L, 0.35, 2.1), mDarkS); ch.position.y = 0.78; V.g.add(ch);
+            var cab = meshE(new T.BoxGeometry(cabL, cabH, 2.3), mBody, lBody); cab.position.set(L / 2 - cabL / 2, 0.95 + cabH / 2, 0); V.g.add(cab);
+            var ws = new T.Mesh(new T.PlaneGeometry(2.0, cabH * 0.42), kit.glass(COL.cyan, 0.4)); ws.rotation.y = Math.PI / 2; ws.position.set(L / 2 + 0.01, 0.95 + cabH * 0.7, 0); V.g.add(ws);
+            [-0.8, 0.8].forEach(function (z) { var hl = glowSprite(kit, 0xfff3d6, 1.3, 0.9); hl.position.set(L / 2 + 0.08, 1.2, z); V.g.add(hl); });
+            [-0.8, 0.8].forEach(function (z) { var tl = glowSprite(kit, COL.red, 0.8, 0.8); tl.position.set(-L / 2 - 0.05, 1.1, z); V.g.add(tl); });
+            var axles = kind === 'van' ? [L / 2 - 0.9, -L / 2 + 0.9] : [L / 2 - 1.0, -L / 2 + 1.2, -L / 2 + 2.4];
+            axles.forEach(function (ax) { [-1.0, 1.0].forEach(function (z) { var w = meshE(wheelGeo, mTyre, lTyre); w.position.set(ax, 0.48, z); V.g.add(w); V.wheels.push(w); }); });
+            var rear = -L / 2, bedL = L - cabL - 0.3, bedX = rear + bedL / 2 + 0.1;
+            if (kind === 'mixer') {
+                V.drumG = new T.Group(); V.drumG.position.set(bedX, 2.3, 0); V.drumG.rotation.z = 0.2; V.g.add(V.drumG);
+                var dg = new T.CylinderGeometry(1.1, 0.6, 4.2, 8); dg.rotateZ(Math.PI / 2);
+                V.drum = meshE(dg, mBody, kit.line(COL.orange, 0.8)); V.drumG.add(V.drum);
+                var chute = new T.Mesh(new T.BoxGeometry(1.2, 0.12, 0.4), mGrey); chute.position.set(rear - 0.3, 1.5, 0); chute.rotation.z = 0.5; V.g.add(chute);
+            } else if (kind === 'dump') {
+                var bed = meshE(new T.BoxGeometry(bedL, 1.3, 2.3), mBody, kit.line(COL.orange, 0.7)); bed.position.set(bedX, 1.65, 0); V.g.add(bed);
+                V.soil = new T.Mesh(new T.BoxGeometry(bedL - 0.2, 1, 2.1), kit.solid(0x8a5a2f, 0.97, 0.15, 0.05)); V.soil.position.set(bedX, 1.05, 0); V.g.add(V.soil);
+                V.bedX = bedX;
+            } else if (kind === 'flatbed') {
+                var deck = new T.Mesh(new T.BoxGeometry(bedL, 0.2, 2.3), mGrey); deck.position.set(bedX, 1.05, 0); V.g.add(deck);
+                var pg = new T.CylinderGeometry(0.22, 0.22, bedL - 0.2, 12); pg.rotateZ(Math.PI / 2);
+                [[-0.6, 1.37, COL.red], [0, 1.37, COL.blue], [0.6, 1.37, COL.red], [-0.3, 1.78, COL.green], [0.3, 1.78, COL.blue]].forEach(function (p) {
+                    var pp = new T.Mesh(pg, kit.solid(p[2], 0.95, 0.35, 0.5)); pp.position.set(bedX, p[1], p[0]); V.g.add(pp);
+                });
+            } else if (kind === 'van') {
+                var tub = meshE(new T.BoxGeometry(bedL, 0.7, 2.2), mBody, lBody); tub.position.set(bedX, 1.3, 0); V.g.add(tub);
+            } else if (kind === 'fire') {
+                var bod = meshE(new T.BoxGeometry(bedL, 1.7, 2.3), mBody, lBody); bod.position.set(bedX, 1.8, 0); V.g.add(bod);
+                V.lights = [glowSprite(kit, COL.red, 1.4, 0), glowSprite(kit, COL.blue, 1.4, 0)];
+                V.lights[0].position.set(L / 2 - 1.0, 3.1, -0.6); V.lights[1].position.set(L / 2 - 1.0, 3.1, 0.6); V.g.add(V.lights[0]); V.g.add(V.lights[1]);
+                // aerial ladder: turntable + 3 telescoping sections + nozzle
+                V.lad = new T.Group(); V.lad.position.set(rear + 1.3, 2.85, 0); V.g.add(V.lad);
+                V.lad.add(new T.Mesh(new T.CylinderGeometry(0.7, 0.7, 0.3, 16), mGrey));
+                var secGeo = new T.BoxGeometry(6, 0.24, 0.8); secGeo.translate(3, 0, 0);
+                var mLad = kit.solid(0xe5e7eb, 0.95, 0.3, 0.6), lLad = kit.line(COL.amber, 0.7);
+                V.secs = [0, 1, 2].map(function (k) { var s = meshE(secGeo, mLad, lLad); s.position.y = 0.2 + k * 0.08; s.scale.set(1, 1 - k * 0.15, 1 - k * 0.15); V.lad.add(s); return s; });
+                V.nozzle = glowSprite(kit, COL.white, 1.0, 0); V.lad.add(V.nozzle);
+                V.ld = { yaw: { x: 0, v: 0, a: 0 }, pit: { x: 0, v: 0, a: 0 }, ext: { x: 0, v: 0, a: 0 } };
+            }
+            g.add(V.g);
+            return V;
+        }
+        var vehicles = [];
+        function addVeh(kind, lane, x, vmax, stopX, wait) {
+            var V = buildTruck(kind); V.lane = lane; V.dir = lane === 'E' ? 1 : -1; V.x = x; V.vmax = vmax; V.stopX = stopX; V.wait = wait;
+            V.g.rotation.y = V.dir > 0 ? 0 : Math.PI; vehicles.push(V); return V;
+        }
+        var mixer = addVeh('mixer', 'E', -24, 6, -9, 5);
+        var dumpT = addVeh('dump', 'W', 36, 6, 20, 4);
+        addVeh('flatbed', 'E', 14, 7, null, 8);
+        addVeh('van', 'W', -14, 8, null, 6);
+        var fireT = addVeh('fire', 'E', -60, 9, -20.5, 0); fireT.st = 'standby'; fireT.g.visible = false;
+
+        /* --- excavator loading the dump truck --- */
+        var EX = { x: 22.5, z: 5.0 }, MOUND = { x: 27.8, z: 0.8 };
+        var mound = meshE(new T.ConeGeometry(2.8, 2.2, 14, 1), kit.solid(0x7a4f2a, 0.95, 0.12, 0.05), kit.line(COL.amber, 0.25)); mound.position.set(MOUND.x, 1.1, MOUND.z); g.add(mound);
+        var exG = new T.Group(); exG.position.set(EX.x, 0, EX.z); g.add(exG);
+        var mEx = kit.solid(COL.amber, 0.96, 0.25, 0.5), lEx = kit.line(COL.white, 0.35);
+        [-1.05, 1.05].forEach(function (z) { var tr = meshE(new T.BoxGeometry(3.6, 0.8, 0.75), mDarkS, lAmberS); tr.position.set(0, 0.4, z); exG.add(tr); });
+        var upper = new T.Group(); upper.position.y = 0.9; exG.add(upper);
+        var house = meshE(new T.BoxGeometry(2.8, 1.2, 2.3), mEx, lEx); house.position.set(-0.4, 0.6, 0); upper.add(house);
+        var exCab = meshE(new T.BoxGeometry(1.1, 1.3, 0.95), kit.glass(COL.cyan, 0.25), kit.line(COL.cyan, 0.8)); exCab.position.set(0.55, 1.85, -0.6); upper.add(exCab);
+        var EL1 = 4.6, EL2 = 3.6, EPY = 1.1, EPX = 1.0;
+        var boomG = new T.Group(); boomG.position.set(EPX, EPY, 0.45); upper.add(boomG);
+        var bGeo = new T.BoxGeometry(EL1, 0.5, 0.42); bGeo.translate(EL1 / 2, 0, 0); boomG.add(meshE(bGeo, mEx, lEx));
+        var stickG = new T.Group(); stickG.position.x = EL1; boomG.add(stickG);
+        var sGeo = new T.BoxGeometry(EL2, 0.36, 0.32); sGeo.translate(EL2 / 2, 0, 0); stickG.add(meshE(sGeo, mEx, lEx));
+        var bucketG = new T.Group(); bucketG.position.x = EL2; stickG.add(bucketG);
+        var bk = meshE(new T.BoxGeometry(0.9, 0.8, 1.1), mDarkS, lAmberS); bk.position.set(0.3, -0.35, 0); bucketG.add(bk);
+        var bkSoil = new T.Mesh(new T.BoxGeometry(0.8, 0.3, 1.0), kit.solid(0x8a5a2f, 0.97, 0.15, 0.05)); bkSoil.position.set(0.3, 0.1, 0); bucketG.add(bkSoil);
+        var exLbl = new Label(kit, COL.amber, 0.9); exLbl.sprite.position.set(EX.x, 6.2, EX.z); g.add(exLbl.sprite);
+        var ex = { yaw: { x: 0, v: 0, a: 0 }, r: { x: 4.5, v: 0, a: 0 }, h: { x: 2.5, v: 0, a: 0 }, b: { x: -1, v: 0, a: 0 }, st: 'reach', tm: 0, full: false, loads: 0 };
+        function yawTo(x, z) { return Math.atan2(-(z - EX.z), x - EX.x); }
+        function exMove(yaw, r, h, b, dt, sp) {
+            sp = sp || 1;
+            var a = approach1(ex.yaw, wrapAngle(yaw, ex.yaw.x), dt, 0.9 * sp, 1.4, 0.01), c = approach1(ex.r, r, dt, 3 * sp, 5, 0.03);
+            var d = approach1(ex.h, h, dt, 3 * sp, 5, 0.03), e = approach1(ex.b, b, dt, 2.5, 6, 0.02);
+            return a && c && d && e;
+        }
+        function stepExcavator(dt) {
+            var dYaw = yawTo(MOUND.x, MOUND.z), dR = Math.hypot(MOUND.x - EX.x, MOUND.z - EX.z) - EPX - 1.7;
+            var truckReady = dumpT.st === 'stopped' && dumpT.load < 0.999;
+            var bedWX = dumpT.x - dumpT.bedX, bedZ = LANE.W;      // truck faces −x, so its bed is on the +x side
+            ex.tm += dt;
+            switch (ex.st) {
+                case 'reach': if (exMove(dYaw, dR + 0.6, 1.9, 0.7, dt)) { ex.st = 'dig'; ex.tm = 0; } break;
+                case 'dig': if (exMove(dYaw, dR - 0.4, 0.9, -1.6, dt, 0.35)) { ex.full = true; ex.st = 'lift'; ex.tm = 0; } break;
+                case 'lift': if (exMove(dYaw, 4.6, 3.8, -1.6, dt)) { ex.st = 'hold'; ex.tm = 0; } break;
+                case 'hold':
+                    if (truckReady) { ex.st = 'swing'; ex.tm = 0; }
+                    else if (ex.tm > 3) { ex.st = 'dump'; ex.tgt = 'mound'; ex.tm = 0; }     // no truck: re-heap the spoil
+                    break;
+                case 'swing':
+                    if (!truckReady) { ex.st = 'hold'; break; }
+                    if (exMove(yawTo(bedWX, bedZ), Math.hypot(bedWX - EX.x, bedZ - EX.z) - EPX, 3.5, -1.6, dt)) { ex.st = 'dump'; ex.tgt = 'truck'; ex.tm = 0; }
+                    break;
+                case 'dump':
+                    exMove(ex.yaw.x, ex.r.x, ex.h.x, 1.0, dt);
+                    if (ex.tm < 0.8 && ex.full) {
+                        var tip = bucketG.getWorldPosition(_v3);
+                        for (var q = 0; q < 3; q++) puff(small, 700, tip.x + rand(-0.4, 0.4), tip.y - 0.3, tip.z + rand(-0.4, 0.4), rand(-0.3, 0.3), rand(-1, 0), rand(-0.3, 0.3), 1.2, cSoil, 9.81, 0.5, ex.tgt === 'truck' ? 1.6 : 0.6);
+                    }
+                    if (ex.tm > 1.0) { if (ex.full && ex.tgt === 'truck') dumpT.load = Math.min(1, dumpT.load + 0.34); ex.full = false; ex.st = 'reach'; ex.tm = 0; }
+                    break;
+            }
+            // pose: 2-link IK for the bucket pin, bucket angle given in world terms
+            var d = Math.min(Math.hypot(ex.r.x, ex.h.x - EPY - 0.9), EL1 + EL2 - 0.01);
+            var c2 = (d * d - EL1 * EL1 - EL2 * EL2) / (2 * EL1 * EL2), a2 = -Math.acos(clamp(c2, -1, 1));
+            var a1 = Math.atan2(ex.h.x - EPY - 0.9, ex.r.x) - Math.atan2(EL2 * Math.sin(a2), EL1 + EL2 * Math.cos(a2));
+            upper.rotation.y = ex.yaw.x; boomG.rotation.z = a1; stickG.rotation.z = a2; bucketG.rotation.z = ex.b.x - (a1 + a2);
+            bkSoil.visible = ex.full;
+            if (tick) exLbl.set('EX-02 · ' + { reach: 'DIG', dig: 'DIG', lift: 'LIFT', hold: 'WAIT TRUCK', swing: 'SWING', dump: 'DUMP' }[ex.st] + ' · TRUCK ' + Math.round(dumpT.load * 100) + '%');
+        }
+        var _v3 = new T.Vector3();
+
+        /* --- workers (hard hats + hi-vis) --- */
+        var wLegGeo = new T.BoxGeometry(0.17, 0.84, 0.19); wLegGeo.translate(0, -0.42, 0);
+        var wArmGeo = new T.BoxGeometry(0.13, 0.66, 0.13); wArmGeo.translate(0, -0.33, 0);
+        var wTorsoGeo = new T.BoxGeometry(0.48, 0.66, 0.28), wHeadGeo = new T.SphereGeometry(0.14, 10, 8), wHatGeo = new T.SphereGeometry(0.18, 12, 6, 0, TAU, 0, Math.PI / 2);
+        var mPants = kit.solid(0x1e3a5f, 0.96, 0.15), mSkin = kit.solid(0xc58c5c, 0.96, 0.2, 0.1);
+        var VEST = [kit.solid(0xff7a1a, 0.97, 0.6, 0.1), kit.solid(0xd9f99d, 0.97, 0.6, 0.1)];
+        var HAT = [kit.solid(0xffffff, 0.97, 0.45, 0.2), kit.solid(0xfacc15, 0.97, 0.5, 0.2), kit.solid(0xff7a1a, 0.97, 0.5, 0.2)];
+        function buildWorker(i, def) {
+            var Wk = { g: new T.Group(), legs: [], arms: [], ph: rand(0, TAU), d: def, seg: 0, u: 0, x: 0, z: 0, y: 0 };
+            [-0.11, 0.11].forEach(function (x) { var p = new T.Group(); p.position.set(x, 0.84, 0); p.add(new T.Mesh(wLegGeo, mPants)); Wk.g.add(p); Wk.legs.push(p); });
+            var tor = new T.Mesh(wTorsoGeo, VEST[i % 2]); tor.position.y = 1.17; Wk.g.add(tor);
+            [-0.31, 0.31].forEach(function (x) { var p = new T.Group(); p.position.set(x, 1.46, 0); p.add(new T.Mesh(wArmGeo, VEST[i % 2])); Wk.g.add(p); Wk.arms.push(p); });
+            var hd = new T.Mesh(wHeadGeo, mSkin); hd.position.y = 1.65; Wk.g.add(hd);
+            var hat = new T.Mesh(wHatGeo, HAT[i % 3]); hat.position.y = 1.7; Wk.g.add(hat);
+            if (def.tool === 'flag') { var fl6 = new T.Mesh(new T.PlaneGeometry(0.45, 0.32), addMat(COL.orange, 0.9, false)); fl6.position.set(0.22, -0.68, 0); Wk.arms[1].add(fl6); }
+            g.add(Wk.g);
+            return Wk;
+        }
+        function slabTop(f) { return (f + 1) * FH + 0.15; }
+        var WDEF = [
+            { path: [[-12, 5.5], [-3, 6.6], [5, 6.2], [-3, 8.2]], sp: 1.3 },
+            { path: [[-25, 7.2], [-11, 7.2], [-11, 4.4], [-25, 4.4]], sp: 1.2 },
+            { path: [[5, 1.5], [15, 1.5], [15, 8.2], [5, 8.2]], sp: 1.4 },
+            { path: [[-24, 5.2], [-30.5, 5.2], [-30.5, -1], [-24, 4]], sp: 1.1 },
+            { path: [[BX - 3, BZ - 3], [BX + 3, BZ - 3], [BX + 3, BZ + 2.6], [BX - 3, BZ + 2.6]], sp: 1.0, floor: 0 },
+            { path: [[BX + 3, BZ + 2.6], [BX - 3, BZ + 2.6], [BX - 3, BZ - 3], [BX + 3, BZ - 3]], sp: 1.1, floor: 2 },
+            { path: [[BX - 3, BZ + 1], [BX + 3, BZ + 1]], sp: 0.9, floor: 4 },
+            { path: [[BX + 2, BZ - 2], [BX - 2, BZ + 2]], sp: 0.9, floor: 6 },
+            { work: 'top', x: BX - 2.2, z: BZ + 1.5, face: 0.8, tool: 'hammer' },
+            { work: 'top', x: BX + 2.4, z: BZ - 1.0, face: -2.2, tool: 'hammer' },
+            { work: 'ground', x: -9.8, z: 8.6, face: 0, tool: 'point' },
+            { work: 'ground', x: -7.4, z: 8.4, face: 0.4, tool: 'hammer' },
+            { work: 'ground', x: 12.5, z: 9.0, face: 0, tool: 'flag' },
+            { work: 'ground', x: 19.2, z: 8.2, face: 2.4, tool: 'wave' },
+            { work: 'ground', x: -6.3, z: 6.3, face: Math.PI, tool: 'hammer' },
+            { work: 'ground', x: PHX + 2.6, z: PHZ + 2.4, face: -2.3, tool: 'point' }
+        ];
+        var workers = WDEF.map(function (d, i) { return buildWorker(i, d); });
+        function stepWorkers(dt, done) {
+            workers.forEach(function (Wk) {
+                var d = Wk.d, walking = false, y = 0;
+                if (d.path) {
+                    if (d.floor != null) { Wk.g.visible = done > d.floor; y = slabTop(d.floor); } else Wk.g.visible = true;
+                    var a = d.path[Wk.seg], b = d.path[(Wk.seg + 1) % d.path.length], sl = Math.hypot(b[0] - a[0], b[1] - a[1]);
+                    Wk.u += d.sp * dt / sl;
+                    if (Wk.u >= 1) { Wk.u = 0; Wk.seg = (Wk.seg + 1) % d.path.length; }
+                    Wk.g.position.set(a[0] + (b[0] - a[0]) * Wk.u, y, a[1] + (b[1] - a[1]) * Wk.u);
+                    Wk.g.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]);
+                    walking = true;
+                } else {
+                    if (d.work === 'top') { y = done >= MAXF ? ROOFY : done > 0 ? slabTop(done - 1) : 0; Wk.g.visible = true; }
+                    Wk.g.position.set(d.x, y, d.z); Wk.g.rotation.y = d.face;
+                }
+                Wk.ph += dt * (walking ? d.sp * 5.5 : 1);
+                var s = Math.sin(Wk.ph);
+                if (walking) {
+                    Wk.legs[0].rotation.x = 0.55 * s; Wk.legs[1].rotation.x = -0.55 * s;
+                    Wk.arms[0].rotation.x = -0.45 * s; Wk.arms[1].rotation.x = 0.45 * s; Wk.arms[1].rotation.z = 0;
+                    Wk.g.position.y += Math.abs(Math.cos(Wk.ph)) * 0.05;
+                } else {
+                    Wk.legs[0].rotation.x = Wk.legs[1].rotation.x = 0; Wk.arms[0].rotation.x = 0;
+                    var tl = t + Wk.ph;
+                    if (d.tool === 'hammer') { Wk.arms[1].rotation.x = -1.4 + 0.9 * Math.abs(Math.sin(tl * 4.5)); Wk.arms[1].rotation.z = 0; }
+                    else if (d.tool === 'flag' || d.tool === 'wave') { Wk.arms[1].rotation.x = 0; Wk.arms[1].rotation.z = 2.4 + 0.45 * Math.sin(tl * (d.tool === 'flag' ? 2.2 : 5)); }
+                    else { Wk.arms[1].rotation.x = -1.45; Wk.arms[1].rotation.z = 0.1 * Math.sin(tl); }
+                }
+            });
+        }
+
+        /* --- fire drill + building systems --- */
+        var drill = { st: 'idle', tm: 0, next: 9, floor: 4, fire: 0, pump: 0 };
+        var fireGlow = glowSprite(kit, 0xff7a2a, 11, 0); g.add(fireGlow);
+        var fireLight = kit.light(new T.PointLight(0xff7a2a, 0, 20, 2)); g.add(fireLight);
+        var fireLbl = new Label(kit, COL.red, 1.3); g.add(fireLbl.sprite);
+        var mepLbl = new Label(kit, COL.cyan, 1.1); mepLbl.sprite.position.set(BX, 0.6, FRONT + 4.6); g.add(mepLbl.sprite);
+        var nextToggle = 8;
+        function stepBuilding(dt, done) {
+            var topped = done >= MAXF, nLit = 0;
+            /* lights come on (with a fluorescent flicker) as each floor is finished; later some floors switch off/on */
+            if (topped && (nextToggle -= dt) <= 0) { var tf = Math.floor(Math.random() * MAXF); if (!(drill.st !== 'idle' && tf === drill.floor)) floors[tf].want = !floors[tf].want; nextToggle = rand(4, 9); }
+            floors.forEach(function (fl, f) {
+                var fit = f < done && fl.mk > 0.99;
+                fl.fit.visible = f < done;
+                if (fit && fl.onAt < 0) fl.onAt = t + 0.8;
+                var on = fit && fl.onAt >= 0 && t > fl.onAt && (fl.want || (drill.st !== 'idle' && f === drill.floor));
+                var target = on ? 1 : 0;
+                if (on && t - fl.onAt < 0.7) target = Math.random() > 0.45 ? 1 : 0.1;    // start-up flicker
+                fl.lit += (target - fl.lit) * Math.min(1, dt * 9);
+                if (drill.st !== 'idle' && f === drill.floor) fl.lit *= 0.75 + 0.25 * Math.random();
+                kit.op(fl.panelMat, 1.0 * fl.lit); kit.op(fl.volMat, 0.24 * fl.lit); kit.op(fl.haloMat, 0.5 * fl.lit);
+                if (on) nLit++;
+                var alarm = drill.st === 'alarm' || drill.st === 'fight';
+                kit.op(fl.strobe.material, alarm && Math.sin(t * 16 + f) > 0.55 ? 1 : 0);
+                /* cool air from the two A/C cassettes */
+                if (fit && Math.random() < dt * 10) CASS.forEach(function (c) {
+                    var ang = Math.floor(Math.random() * 4) * Math.PI / 2;
+                    puff(small, 700, c[0] + Math.cos(ang) * 0.55, fl.ceil - 0.25, c[1] + Math.sin(ang) * 0.55, Math.cos(ang) * 1.1, -0.35, Math.sin(ang) * 1.1, 1.4, cCold, 0.3, 1.5, f * FH + 0.2);
+                });
+            });
+            var top = done * FH;
+            [fireRiser, refRiser].forEach(function (r) { r.visible = top > 0; r.scale.y = Math.max(0.001, top); });
+            refRiser.scale.x = refRiser.scale.z = 0.75;
+            roof.visible = topped;
+            vrfFans.forEach(function (fg, i) { fg.rotation.y += dt * (14 + i); });
+            if (topped && Math.random() < dt * 12) { var vx = BX + (Math.floor(Math.random() * 3) - 1) * 2.4; puff(small, 700, vx + rand(-0.3, 0.3), ROOFY + 1.6, BZ - 2.8 + rand(-0.3, 0.3), rand(-0.2, 0.2), 1.6, rand(-0.2, 0.2), 1.3, cHeat, -0.4, 0.8, 0); }
+            kit.op(beacon.material, Math.sin(t * 3) > 0.7 ? 1 : 0.15);
+            if (tick) vrfLbl.set('VRF · 3 × 28 kW · COOLING 24°C');
+
+            /* fire drill: alarm → sprinklers + fire pump → fire engine + aerial ladder → all clear */
+            drill.tm += dt;
+            var F = drill.floor, fy = F * FH + 0.2, fcx = BX + 0.5, fcz = BZ + 1.2;
+            switch (drill.st) {
+                case 'idle':
+                    if (topped && (drill.next -= dt) <= 0) { drill.floor = 2 + Math.floor(Math.random() * (MAXF - 3)); drill.st = 'alarm'; drill.tm = 0; drill.fire = 0; }
+                    break;
+                case 'alarm':
+                    drill.fire = Math.min(1, drill.fire + dt / 2.5);
+                    if (drill.tm > 2.5) { drill.st = 'fight'; drill.tm = 0; fireT.st = 'drive'; fireT.x = -56; fireT.served = false; fireT.g.visible = true; }
+                    break;
+                case 'fight':
+                    var hose = fireT.spraying ? 2.2 : 1;
+                    drill.fire = Math.max(0, drill.fire - dt / 34 * hose);
+                    if (drill.fire <= 0) { drill.st = 'clear'; drill.tm = 0; }
+                    break;
+                case 'clear':
+                    if (drill.tm > 9) { drill.st = 'idle'; drill.next = rand(22, 32); }
+                    break;
+            }
+            var sprink = drill.st === 'fight' || (drill.st === 'clear' && drill.tm < 2.5);
+            var pumpOn = sprink || (drill.st === 'clear' && drill.tm < 4) ? 1 : 0;
+            drill.pump += (pumpOn - drill.pump) * Math.min(1, dt * 2);
+            var fr = drill.fire;
+            if (fr > 0.01) {
+                var fl7 = 0.7 + 0.3 * noise(t * 9, 2);
+                fireGlow.position.set(fcx, fy + 1.0, fcz); kit.op(fireGlow.material, fr * fl7);
+                fireLight.position.set(fcx, fy + 1.4, FRONT + 1.5); kit.lightI(fireLight, 5 * fr * fl7);
+                for (var fq = 0; fq < 2; fq++) if (Math.random() < dt * 60 * fr) puff(big, 240, fcx + rand(-2.6, 2.6), fy, fcz + rand(-0.5, 1.6), rand(-0.2, 0.2), rand(1.2, 2.4), rand(-0.2, 0.2), rand(0.4, 0.8), cFire, -0.5, 1.2, 0);
+                if (Math.random() < dt * 25 * fr) puff(big, 240, fcx + rand(-2, 2), fy + 2.2, FRONT + 0.2, rand(-0.3, 0.3), rand(1.2, 2.2), rand(0.4, 1.2), rand(2.5, 4), cSmoke, -0.25, 0.4, 0);
+            } else { kit.op(fireGlow.material, 0); kit.lightI(fireLight, 0); }
+            if (sprink) for (var si = 0; si < SPR.length; si++) if (Math.random() < dt * 30) {
+                var a5 = rand(0, TAU), s5 = rand(0.6, 1.6);
+                puff(small, 700, SPR[si][0], floors[F].ceil - 0.5, SPR[si][1], Math.cos(a5) * s5, rand(-0.5, 0), Math.sin(a5) * s5, 1.0, cWater, 9.81, 0.6, fy);
+            }
+            /* fire pump + flow up the red riser */
+            kit.op(pumpGlow.material, 0.85 * drill.pump * (0.75 + 0.25 * Math.sin(t * 20)));
+            water.scale.y = 3.2 - 0.6 * (drill.st === 'idle' ? 0 : 1) * Math.min(1, drill.tm / 10); water.position.y = water.scale.y / 2;
+            if (drill.pump > 0.3 && Math.random() < dt * 30) puff(small, 700, fireRiser.position.x, 0.3, fireRiser.position.z + 0.22, 0, 5 + rand(0, 1), 0, (fy + 2) / 5.5, cRed, 0, 0, 0);
+            if (tick) {
+                pumpLbl.set(drill.pump > 0.3 ? 'FIRE PUMP · RUNNING 750 GPM' : 'FIRE PUMP · AUTO STANDBY');
+                fireLbl.sprite.visible = drill.st !== 'idle';
+                fireLbl.sprite.position.set(BX - 9.5, F * FH + 2.0, FRONT + 1);
+                fireLbl.set(drill.st === 'alarm' ? 'FIRE ALARM · L' + (F + 1) : drill.st === 'fight' ? 'L' + (F + 1) + ' · SPRINKLERS ON · ' + Math.round(drill.fire * 100) + '%' : 'ALL CLEAR · L' + (F + 1));
+                mepLbl.set(topped ? 'LIGHTS ' + nLit + '/' + MAXF + ' · A/C ON · FIRE ' + (drill.st === 'idle' ? 'OK' : drill.st === 'clear' ? 'RESET' : 'ALARM') : 'MEP FIT-OUT · L' + Math.max(1, done));
+            }
+            return { fy: fy, F: F };
+        }
+
+        function stepFireTruck(V, dt, fireInfo) {
+            var lit = V.st !== 'standby' && (drill.st !== 'idle');
+            kit.op(V.lights[0].material, lit && Math.sin(t * 14) > 0 ? 1 : 0); kit.op(V.lights[1].material, lit && Math.sin(t * 14) <= 0 ? 1 : 0);
+            var ld = V.ld, deployed = false;
+            V.spraying = false;
+            if (V.st === 'stopped' && (drill.st === 'alarm' || drill.st === 'fight')) {
+                var base = V.lad.getWorldPosition(_v3), tx = BX - 1.0, ty = fireInfo.fy + 1.3, tz = FRONT + 0.8;
+                var dx = tx - base.x, dy = ty - base.y, dz = tz - base.z, hz = Math.hypot(dx, dz);
+                var a = approach1(ld.yaw, Math.atan2(-dz, dx), dt, 0.9, 1.2, 0.005);
+                var b = a && approach1(ld.pit, Math.atan2(dy, hz), dt, 0.6, 0.9, 0.005);
+                var c = b && approach1(ld.ext, clamp(Math.hypot(hz, dy) - 6.6, 0, 12), dt, 3, 2.5, 0.02);
+                deployed = a && b && c;
+            } else {
+                var c2 = approach1(ld.ext, 0, dt, 2.5, 2, 0.02);
+                var b2 = c2 && approach1(ld.pit, 0, dt, 0.4, 0.6, 0.005);
+                if (b2) approach1(ld.yaw, 0, dt, 0.6, 0.8, 0.005);
+            }
+            V.lad.rotation.set(0, ld.yaw.x, ld.pit.x);
+            V.secs[1].position.x = ld.ext.x / 2; V.secs[2].position.x = ld.ext.x;
+            var tipL = 6 + ld.ext.x; V.nozzle.position.set(tipL, 0.35, 0);
+            if (deployed && drill.fire > 0) {
+                V.spraying = true;
+                kit.op(V.nozzle.material, 0.9);
+                var tip = V.nozzle.getWorldPosition(new T.Vector3()), dir = new T.Vector3(Math.cos(ld.pit.x) * Math.cos(ld.yaw.x), Math.sin(ld.pit.x), -Math.cos(ld.pit.x) * Math.sin(ld.yaw.x));
+                dir.y -= 0.25; dir.normalize();
+                for (var q = 0; q < 3; q++) puff(small, 700, tip.x, tip.y, tip.z, dir.x * 9 + rand(-0.4, 0.4), dir.y * 9 + rand(-0.4, 0.4), dir.z * 9 + rand(-0.4, 0.4), 0.55, cWater, 9.81, 0.3, 0);
+            } else kit.op(V.nozzle.material, 0);
+            V.stowed = ld.ext.x === 0 && ld.pit.x === 0 && ld.yaw.x === 0;
+        }
+        function releaseVeh(V) {
+            if (V.kind === 'mixer') return V.tm > 9;
+            if (V.kind === 'dump') return V.load >= 0.999 && V.tm > 1.2;
+            if (V.kind === 'fire') return (drill.st === 'clear' || drill.st === 'idle') && V.stowed;
+            return true;
+        }
+        function stepVehicles(dt) {
+            vehicles.forEach(function (V) {
+                if (V.st === 'standby') { V.g.visible = false; return; }
+                if (V.st === 'gone') {
+                    V.tm += dt;
+                    if (V.tm < V.wait) return;
+                    V.x = -56 * V.dir; V.served = false; V.load = 0; V.st = 'drive'; V.v = V.vmax * 0.8;
+                }
+                var target = V.vmax;
+                if (V.st === 'stopped') target = 0;
+                else {
+                    if (V.stopX !== null && !V.served) {
+                        var ds = (V.stopX - V.x) * V.dir;
+                        if (ds > -0.5) target = Math.min(target, Math.sqrt(2 * 2.0 * Math.max(0, ds)));
+                        if (ds < 0.3 && V.v < 0.35) { V.st = 'stopped'; V.tm = 0; V.v = 0; V.x = V.stopX; }
+                    }
+                    var gap = 1e9;
+                    vehicles.forEach(function (o) {
+                        if (o === V || o.lane !== V.lane || o.st === 'gone' || o.st === 'standby') return;
+                        var dd = (o.x - V.x) * V.dir; if (dd > 0) gap = Math.min(gap, dd - (o.len + V.len) / 2);
+                    });
+                    if (gap < 1e8) target = Math.min(target, Math.sqrt(2 * 2.0 * Math.max(0, gap - 2.5)));
+                }
+                V.v = Math.max(0, V.v + clamp(target - V.v, -4.5 * dt, 2.2 * dt));
+                V.x += V.v * V.dir * dt;
+                if (V.st === 'stopped') { V.tm += dt; if (releaseVeh(V)) { V.served = true; V.st = 'drive'; } }
+                if (V.x * V.dir > 58) { V.st = V.kind === 'fire' ? 'standby' : 'gone'; V.tm = 0; }
+                V.g.position.set(V.x, 0, LANE[V.lane]);
+                V.wheels.forEach(function (w) { w.rotation.z -= V.v * dt / 0.48; });
+                if (V.drum) V.drum.rotation.x += dt * (V.st === 'stopped' ? 3.5 : 1.2);
+                if (V.soil) { V.soil.visible = V.load > 0.01; V.soil.scale.y = Math.max(0.01, V.load); V.soil.position.y = 1.05 + 0.5 * V.load; }
+                if (V.st === 'stopped' && V.kind === 'mixer' && Math.random() < dt * 25)       // concrete down the chute
+                    puff(small, 700, V.x - V.len / 2 - 0.8, 1.2, LANE[V.lane] + rand(-0.15, 0.15), -0.4, -0.5, rand(-0.1, 0.1), 0.6, new T.Color(0x9ca3af), 9.81, 0.5, 0.05);
+            });
+        }
+
+        function updSite(dt, done) {
+            var info = stepBuilding(dt, done);
+            stepVehicles(dt);
+            stepFireTruck(fireT, dt, info);
+            stepExcavator(dt);
+            stepWorkers(dt, done);
+            stepP(big, PBIG, dt, function (p, k) { return p.c === cSmoke ? Math.min(1, k * 2) * 0.55 : Math.min(1, k * 1.8); });
+            stepP(small, PSM, dt, function (p, k) { return p.c === cCold ? Math.sin(Math.PI * k) * 0.55 : p.c === cHeat ? k * 0.35 : Math.min(1, k * 2) * 0.9; });
+        }
+
         function ropeFor(yb) { return PIVY - (yb + LH + SL); }
         function craneStep(dt) {
             var src = cr.fromA ? PA : PB, dst = cr.fromA ? PB : PA;
@@ -528,6 +1004,7 @@
             var fl5 = Math.pow(Math.max(0, Math.sin(t * 4.2)), 8);
             kit.op(avLight.material, 0.15 + 0.85 * fl5); avLight.scale.setScalar(1.5 + 2.5 * fl5);
             if (tick) craneLbl.set('TC-01 · ' + (cr.has ? '1.8' : '0.4') + ' t · R ' + cr.r.x.toFixed(1) + ' m · sway ' + (Math.hypot(cr.sx, cr.sz) * 180 / Math.PI).toFixed(1) + '°');
+            updSite(dt, done);
         }
         return { kit: kit, group: g, update: update };
     }
@@ -1583,7 +2060,7 @@
     // All three scenes share one stage; switching cross-fades them (a holographic "morph") while the
     // camera sweeps round the stage and re-frames for the new scene — the screen is never empty.
     var VIEWS = [
-        { target: [-3, 12.5, 0], dist: 56, elev: 5, half: 27 },
+        { target: [-2, 11.5, 1], dist: 58, elev: 6, half: 31 },
         { target: [0, 3.0, -2.4], dist: 29, elev: 7.5, half: 19.5 },
         { target: [0, 7.5, -1], dist: 38, elev: 5, half: 24 }
     ];
