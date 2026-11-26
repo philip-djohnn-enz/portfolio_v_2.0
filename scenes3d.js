@@ -15,8 +15,10 @@
  *                   gantry, lid place (vacuum), laser seam weld with sparks, vision QC arch, robot unload
  *                   onto two mecanum AGVs that swap at the dock; quadcopters and a PCB backdrop.
  *   2  STEM       — spherical pendulum (precessing orbit, RK4), a ball that bounces with restitution,
- *                   a 3-D atom with orbiting electrons, a two-source wave-interference surface and
- *                   physics formulas floating at different depths.
+ *                   a 3-D atom, a two-source wave-interference surface, a unit circle generating a sine
+ *                   wave, Fourier epicycles drawing a heart / star, a live Lorenz attractor, a golden-angle
+ *                   phyllotaxis spiral, Platonic solids / trefoil knot / Möbius strip flying round the
+ *                   stage with trails, and math symbols (π Σ ∫ √ ∞ … e^iπ+1=0) swooping past the viewer.
  *
  * Falls back to the 2-D version (scenes.js) when three.js did not load, WebGL is unavailable,
  * or the visitor prefers reduced motion. Same API: BgScenes.init(), BgScenes.setScene(0|1|2).
@@ -1231,7 +1233,7 @@
         waveLbl.set('y = A[sin(kr₁−ωt) + sin(kr₂−ωt)]');
 
         /* --- Floating formulas at different depths --- */
-        var forms = [], nF = mobile ? 10 : 18;
+        var forms = [], nF = mobile ? 8 : 12;
         for (var fI = 0; fI < nF; fI++) {
             var cv = document.createElement('canvas'); cv.width = 512; cv.height = 96;
             var cx = cv.getContext('2d'), col = Math.random() > 0.35 ? COL.violet : COL.cyan;
@@ -1243,6 +1245,246 @@
             var hgt = rand(0.9, 1.7); spr.scale.set(hgt * 512 / 96, hgt, 1);
             spr.position.set(rand(-28, 28), rand(0, 24), rand(-18, 10)); g.add(spr);
             forms.push({ s: spr, v: rand(0.35, 0.8), ph: rand(0, 6.28) });
+        }
+
+        /* ================= MATH LAYER ================= */
+        var lAxis = kit.line(COL.white, 0.25), lCyanM = kit.line(COL.cyan, 0.85);
+        function setL(l, a, b, c, d, e, f) {
+            var p = l.geometry.attributes.position.array; p[0] = a; p[1] = b; p[2] = c; p[3] = d; p[4] = e; p[5] = f;
+            l.geometry.attributes.position.needsUpdate = true;
+        }
+        function fadeTrail(n, c1, c2, peak, pw) {
+            var tr = dynLine(n, fadeLineMat(kit), false, true), col = tr.geometry.attributes.color.array;
+            for (var q = 0; q < n; q++) {
+                var u = q / n, k = Math.pow(1 - u, pw || 1.3) * (peak || 0.9);
+                col[q * 3] = (c1.r + (c2.r - c1.r) * u) * k; col[q * 3 + 1] = (c1.g + (c2.g - c1.g) * u) * k; col[q * 3 + 2] = (c1.b + (c2.b - c1.b) * u) * k;
+            }
+            tr.geometry.attributes.color.needsUpdate = true; tr.fill = false;
+            return tr;
+        }
+        function pushTrail(tr, x, y, z) {
+            var a = tr.geometry.attributes.position.array, n = a.length / 3;
+            a.copyWithin(3, 0, (n - 1) * 3); a[0] = x; a[1] = y; a[2] = z;
+            if (!tr.fill) { for (var q = 1; q < n; q++) { a[q * 3] = x; a[q * 3 + 1] = y; a[q * 3 + 2] = z; } tr.fill = true; }
+            tr.geometry.attributes.position.needsUpdate = true;
+        }
+        function circlePts(r, n) {
+            var p = [];
+            for (var q = 0; q < n; q++) { var a0 = q / n * Math.PI * 2, a1 = (q + 1) / n * Math.PI * 2; p.push(r * Math.cos(a0), r * Math.sin(a0), 0, r * Math.cos(a1), r * Math.sin(a1), 0); }
+            return p;
+        }
+        var TAU = Math.PI * 2;
+
+        /* --- Unit circle → sine wave (e^{iθ} = cos θ + i sin θ) --- */
+        var UC = new T.Group(); UC.position.set(-8.5, 15, -3); g.add(UC);
+        var UR = 2.2, UW = 11, UN = 140, WX0 = UR + 0.8;
+        UC.add(lines(circlePts(UR, 72), lCyanM));
+        UC.add(lines([-UR - 0.6, 0, 0, WX0 + UW + 0.3, 0, 0, 0, -UR - 0.6, 0, 0, UR + 0.6, 0], lAxis));
+        var tk = []; for (var q0 = 1; q0 <= 4; q0++) { var xx = WX0 + q0 * UW / 4; tk.push(xx, -0.18, 0, xx, 0.18, 0); }
+        UC.add(lines(tk, lAxis));
+        var ucRad = dynLine(2, kit.line(COL.white, 0.9)), ucSin = dynLine(2, kit.line(COL.cyan, 0.95)), ucCos = dynLine(2, kit.line(COL.violet, 0.95));
+        var ucLink = dynLine(2, kit.line(COL.cyan, 0.3)), ucArc = dynLine(40, kit.line(COL.amber, 0.85)), ucWave = dynLine(UN, kit.line(COL.cyan, 0.9));
+        [ucRad, ucSin, ucCos, ucLink, ucArc, ucWave].forEach(function (l) { UC.add(l); });
+        var ucDot = glowSprite(kit, COL.white, 1.0, 0.95), ucDot2 = glowSprite(kit, COL.cyan, 0.9, 0.95); UC.add(ucDot); UC.add(ucDot2);
+        var ucLbl = new Label(kit, COL.cyan, 0.55, 'left'); ucLbl.sprite.position.set(-UR - 0.4, UR + 0.95, 0); UC.add(ucLbl.sprite);
+        var ucLbl2 = new Label(kit, COL.violet, 0.55, 'left'); ucLbl2.sprite.position.set(WX0 + 1.2, UR + 0.95, 0); UC.add(ucLbl2.sprite);
+        ucLbl2.set('e^(iθ) = cos θ + i·sin θ');
+        function updUnit() {
+            var th = t * 0.8, cs = Math.cos(th), sn = Math.sin(th), px = UR * cs, py = UR * sn;
+            setL(ucRad, 0, 0, 0, px, py, 0); setL(ucSin, px, 0, 0, px, py, 0); setL(ucCos, 0, 0, 0, px, 0, 0); setL(ucLink, px, py, 0, WX0, py, 0);
+            var ap = ucArc.geometry.attributes.position.array, thm = ((th % TAU) + TAU) % TAU;
+            for (var q = 0; q < 40; q++) { var a = thm * q / 39; ap[q * 3] = 0.6 * Math.cos(a); ap[q * 3 + 1] = 0.6 * Math.sin(a); ap[q * 3 + 2] = 0; }
+            ucArc.geometry.attributes.position.needsUpdate = true;
+            var wp = ucWave.geometry.attributes.position.array;
+            for (var q2 = 0; q2 < UN; q2++) { var u = q2 / (UN - 1) * UW; wp[q2 * 3] = WX0 + u; wp[q2 * 3 + 1] = UR * Math.sin(th - TAU * u / UW); wp[q2 * 3 + 2] = 0; }
+            ucWave.geometry.attributes.position.needsUpdate = true;
+            ucDot.position.set(px, py, 0); ucDot2.position.set(WX0, py, 0);
+            if (tick) ucLbl.set('θ ' + (thm * 57.2958).toFixed(0) + '° · sin ' + sn.toFixed(2) + ' · cos ' + cs.toFixed(2));
+        }
+
+        /* --- Fourier epicycles: rotating circles c_k·e^{ikt} add up to draw a shape --- */
+        function dft(xs, ys, K) {
+            var N = xs.length, out = [];
+            for (var k = -K; k <= K; k++) {
+                var re = 0, im = 0;
+                for (var n = 0; n < N; n++) { var a = -k * n / N * TAU, c = Math.cos(a), s = Math.sin(a); re += xs[n] * c - ys[n] * s; im += xs[n] * s + ys[n] * c; }
+                re /= N; im /= N;
+                var r = Math.hypot(re, im);
+                if (r > 2e-3) out.push({ k: k, r: r, ph: Math.atan2(im, re) });
+            }
+            return out.sort(function (p, q) { return q.r - p.r; });
+        }
+        var hxs = [], hys = [], sxs = [], sys = [], NSF = 512;
+        for (var n0 = 0; n0 < NSF; n0++) {           // heart: x = 16 sin³t, y = 13cos t − 5cos 2t − 2cos 3t − cos 4t
+            var s0 = n0 / NSF * TAU, sn0 = Math.sin(s0);
+            hxs.push(16 * sn0 * sn0 * sn0 * 0.13); hys.push((13 * Math.cos(s0) - 5 * Math.cos(2 * s0) - 2 * Math.cos(3 * s0) - Math.cos(4 * s0)) * 0.13);
+        }
+        var STV = []; for (var q1 = 0; q1 <= 10; q1++) { var sa = Math.PI / 2 + q1 * Math.PI / 5, sr = (q1 % 2 ? 0.42 : 1) * 2.4; STV.push([sr * Math.cos(sa), sr * Math.sin(sa)]); }
+        for (var n1 = 0; n1 < NSF; n1++) {           // five-point star, sampled along its outline
+            var f = n1 / NSF * 10, e0 = Math.floor(f), fr = f - e0;
+            sxs.push(STV[e0][0] + (STV[e0 + 1][0] - STV[e0][0]) * fr); sys.push(STV[e0][1] + (STV[e0 + 1][1] - STV[e0][1]) * fr);
+        }
+        var SHAPES = [{ name: 'HEART', c: dft(hxs, hys, 6) }, { name: 'STAR', c: dft(sxs, sys, 40) }];
+        var FE = new T.Group(); FE.position.set(15, 4.2, 5); FE.scale.setScalar(1.3); g.add(FE);
+        var MAXC = 0; SHAPES.forEach(function (sh) { MAXC = Math.max(MAXC, sh.c.length); });
+        var unitCirc = new T.BufferGeometry(), ucp = [];
+        for (var q3 = 0; q3 < 48; q3++) { var a3 = q3 / 48 * TAU; ucp.push(Math.cos(a3), Math.sin(a3), 0); }
+        unitCirc.setAttribute('position', new T.Float32BufferAttribute(ucp, 3));
+        var feCircMat = kit.line(COL.violet, 0.45), feCircles = [];
+        for (var q4 = 0; q4 < MAXC; q4++) { var lc = new T.LineLoop(unitCirc, feCircMat); FE.add(lc); feCircles.push(lc); }
+        var feArms = dynLine(MAXC + 1, kit.line(COL.white, 0.7)); FE.add(feArms);
+        var FEN = 320, fePath = fadeTrail(FEN, new T.Color(0xffffff), new T.Color(COL.cyan), 1, 0.3); FE.add(fePath);
+        var feTip = glowSprite(kit, COL.cyan, 1.1, 1); FE.add(feTip);
+        var feLbl = new Label(kit, COL.violet, 0.55); feLbl.sprite.position.set(0, -3.3, 0); FE.add(feLbl.sprite);
+        var feLbl2 = new Label(kit, COL.cyan, 0.5); feLbl2.sprite.position.set(0, -3.85, 0); FE.add(feLbl2.sprite);
+        feLbl2.set('z(t) = Σ cₖ · e^(ikt)');
+        var FW = 0.6;
+        function epi(cs, tau, out) {
+            var x = 0, y = 0;
+            for (var k = 0; k < cs.length; k++) { var c = cs[k], a = c.k * tau + c.ph; x += c.r * Math.cos(a); y += c.r * Math.sin(a); }
+            out[0] = x; out[1] = y;
+        }
+        var _e = [0, 0];
+        function updFourier() {
+            var tau = t * FW, cyc = Math.floor(tau / TAU), sh = SHAPES[cyc % 2], cs = sh.c;
+            var ap = feArms.geometry.attributes.position.array, x = 0, y = 0;
+            ap[0] = 0; ap[1] = 0; ap[2] = 0;
+            for (var k = 0; k < MAXC; k++) {
+                var C = feCircles[k];
+                if (k >= cs.length) { C.visible = false; ap[(k + 1) * 3] = x; ap[(k + 1) * 3 + 1] = y; ap[(k + 1) * 3 + 2] = 0; continue; }
+                var c = cs[k], a = c.k * tau + c.ph;
+                C.visible = true; C.position.set(x, y, 0); C.scale.setScalar(Math.max(c.r, 1e-3));
+                x += c.r * Math.cos(a); y += c.r * Math.sin(a);
+                ap[(k + 1) * 3] = x; ap[(k + 1) * 3 + 1] = y; ap[(k + 1) * 3 + 2] = 0;
+            }
+            feArms.geometry.attributes.position.needsUpdate = true;
+            feTip.position.set(x, y, 0);
+            // the drawn path: only the part already traced in this cycle, so each shape draws itself from scratch
+            var done = tau - cyc * TAU, pp = fePath.geometry.attributes.position.array;
+            for (var q = 0; q < FEN; q++) { epi(cs, tau - Math.min(done, TAU * 0.995) * q / (FEN - 1), _e); pp[q * 3] = _e[0]; pp[q * 3 + 1] = _e[1]; pp[q * 3 + 2] = 0; }
+            fePath.geometry.attributes.position.needsUpdate = true;
+            if (tick) feLbl.set('FOURIER · ' + sh.name + ' · ' + cs.length + ' CIRCLES');
+        }
+
+        /* --- Lorenz attractor (chaos), integrated live with RK4 --- */
+        var LZ = new T.Group(); LZ.position.set(17.5, 12.2, -13); LZ.scale.setScalar(0.17); g.add(LZ);
+        var lz = [1, 1, 1], LSIG = 10, LRHO = 28, LBET = 8 / 3, LH = 0.005, NLZ = mobile ? 800 : 1500;
+        function lzD(s) { return [LSIG * (s[1] - s[0]), s[0] * (LRHO - s[2]) - s[1], s[0] * s[1] - LBET * s[2]]; }
+        function lzStep() {
+            var k1 = lzD(lz), k2 = lzD([lz[0] + k1[0] * LH / 2, lz[1] + k1[1] * LH / 2, lz[2] + k1[2] * LH / 2]);
+            var k3 = lzD([lz[0] + k2[0] * LH / 2, lz[1] + k2[1] * LH / 2, lz[2] + k2[2] * LH / 2]), k4 = lzD([lz[0] + k3[0] * LH, lz[1] + k3[1] * LH, lz[2] + k3[2] * LH]);
+            for (var j = 0; j < 3; j++) lz[j] += (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]) * LH / 6;
+        }
+        for (var w0 = 0; w0 < 1500; w0++) lzStep();
+        var lzTrail = fadeTrail(NLZ, new T.Color(COL.cyan), new T.Color(COL.purple), 1); LZ.add(lzTrail);
+        for (var w1 = NLZ; w1 > 0; w1--) { lzStep(); pushTrail(lzTrail, lz[0], lz[2], lz[1]); }
+        var lzHead = glowSprite(kit, COL.white, 6, 1); LZ.add(lzHead);
+        var lzLbl = new Label(kit, COL.cyan, 0.55); lzLbl.sprite.position.set(17.5, 21.8, -13); g.add(lzLbl.sprite);
+        lzLbl.set('LORENZ · σ=10 ρ=28 β=8/3');
+        var lzAcc = 0;
+        function updLorenz(dt) {
+            lzAcc += dt * 0.55;                         // simulated seconds per real second
+            while (lzAcc > LH) { lzAcc -= LH; lzStep(); pushTrail(lzTrail, lz[0], lz[2], lz[1]); }
+            lzHead.position.set(lz[0], lz[2], lz[1]);
+            LZ.rotation.y = 0.35 * Math.sin(t * 0.07);
+        }
+
+        /* --- Phyllotaxis: sunflower seeds at the golden angle 137.5° --- */
+        var NPH = mobile ? 220 : 380, GOLD = Math.PI * (3 - Math.sqrt(5)), PHY = particles(kit, NPH, 0.34);
+        PHY.obj.position.set(-11, 0.08, 9); g.add(PHY.obj);
+        var phLbl = new Label(kit, COL.amber, 0.5); phLbl.sprite.position.set(-11, 1.0, 12.4); g.add(phLbl.sprite);
+        phLbl.set('GOLDEN ANGLE 137.5° · r = c·√n');
+        var cAmber = new T.Color(COL.amber);
+        function updPhyllo() {
+            var grow = (t * 40) % (NPH + 140);
+            for (var n = 0; n < NPH; n++) {
+                if (n > grow) { PHY.hide(n); continue; }
+                var r = 0.17 * Math.sqrt(n), a = n * GOLD + t * 0.08, u = n / NPH;
+                _c.copy(cAmber).lerp(cPurple, u);
+                PHY.set(n, r * Math.cos(a), 0, r * Math.sin(a), _c, Math.min(1, (grow - n) / 12) * (grow > NPH + 100 ? (NPH + 140 - grow) / 40 : 1));
+            }
+            PHY.flush();
+        }
+
+        /* --- Math solids flying round the whole stage (they pass in front of the camera) --- */
+        function mobiusGeo() {
+            var pos = [], idx = [], NU = 60, NV = 5;
+            for (var iu = 0; iu <= NU; iu++) for (var iv = 0; iv <= NV; iv++) {
+                var u = iu / NU * TAU, v = (iv / NV - 0.5) * 0.9, r = 1.05 + v * Math.cos(u / 2);
+                pos.push(r * Math.cos(u), r * Math.sin(u), v * Math.sin(u / 2));
+            }
+            for (var a = 0; a < NU; a++) for (var b = 0; b < NV; b++) { var i1 = a * (NV + 1) + b, i2 = i1 + NV + 1; idx.push(i1, i2, i1 + 1, i2, i2 + 1, i1 + 1); }
+            var geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+            return geo;
+        }
+        var FLYDEF = [
+            { geo: new T.IcosahedronGeometry(1.15, 0), col: COL.cyan, txt: 'ICOSAHEDRON · V − E + F = 2' },
+            { geo: new T.DodecahedronGeometry(1.15, 0), col: COL.violet, txt: 'DODECAHEDRON · φ = (1+√5)/2' },
+            { geo: new T.TorusKnotGeometry(0.75, 0.2, 64, 6, 2, 3), col: COL.purple, txt: 'TREFOIL KNOT (2, 3)', wire: true },
+            { geo: mobiusGeo(), col: COL.cyan, txt: 'MÖBIUS STRIP · ONE SIDE', wire: true },
+            { geo: new T.OctahedronGeometry(1.2, 0), col: COL.amber, txt: 'OCTAHEDRON · V = (√2/3)a³' }
+        ];
+        var flyers = FLYDEF.map(function (d, i) {
+            var F = { g: new T.Group(), ph: i / FLYDEF.length * TAU, R: 22 + (i % 3) * 1.6, i: i };
+            F.g.add(new T.Mesh(d.geo, kit.glass(d.col, 0.1)));
+            F.g.add(new T.LineSegments(d.wire ? new T.WireframeGeometry(d.geo) : edgesOf(d.geo), kit.line(d.col, d.wire ? 0.5 : 0.95, true)));
+            F.g.add(glowSprite(kit, d.col, 3.2, 0.25));
+            g.add(F.g);
+            var cc = new T.Color(d.col);
+            F.tr = fadeTrail(mobile ? 50 : 90, cc, cc, 0.7); g.add(F.tr);
+            F.lbl = new Label(kit, d.col, 0.42); F.lbl.set(d.txt); g.add(F.lbl.sprite);
+            return F;
+        });
+        function updFlyers(dt) {
+            flyers.forEach(function (F) {
+                var a = t * 0.12 + F.ph;
+                var x = F.R * Math.sin(a), z = 4 + 16 * Math.cos(a) + 2 * Math.sin(a * 3 + F.i);
+                var y = 8.5 + 4.5 * Math.sin(2 * a + F.i) + 1.2 * Math.sin(t * 0.6 + F.i);
+                F.g.position.set(x, y, z);
+                F.g.rotation.x += dt * (0.5 + 0.1 * F.i); F.g.rotation.y += dt * (0.8 - 0.07 * F.i);
+                F.lbl.sprite.position.set(x, y + 1.9, z);
+                if (dt) pushTrail(F.tr, x, y, z);
+            });
+        }
+
+        /* --- Math symbols swooping past the viewer --- */
+        var SYMS = ['π', 'Σ', '∫', '√', '∞', 'Δ', 'θ', '∂', 'λ', 'EULER'];
+        var SCOL = [COL.cyan, COL.violet, COL.purple, COL.cyan, COL.amber, COL.violet, COL.cyan, COL.purple, COL.violet, COL.amber];
+        var nSym = mobile ? 6 : SYMS.length;
+        var syms = [];
+        for (var si = 0; si < nSym; si++) {
+            var euler = SYMS[si] === 'EULER', cvs = document.createElement('canvas');
+            cvs.width = euler ? 900 : 256; cvs.height = 256;
+            var x2 = cvs.getContext('2d'), sc = hex(SCOL[si]);
+            x2.fillStyle = sc; x2.shadowColor = sc; x2.shadowBlur = 18; x2.textBaseline = 'middle';
+            if (euler) {                                 // e^{iπ} + 1 = 0 with a real superscript
+                var big = 'italic 150px "Cambria Math", "Times New Roman", serif', small = 'italic 80px "Cambria Math", "Times New Roman", serif';
+                x2.textAlign = 'left';
+                x2.font = big; x2.fillText('e', 30, 150); var ex = 30 + x2.measureText('e').width + 6;
+                x2.font = small; x2.fillText('iπ', ex, 78); ex += x2.measureText('iπ').width + 10;
+                x2.font = big; x2.fillText('+ 1 = 0', ex, 150);
+            } else {
+                x2.font = 'italic 200px "Cambria Math", "Times New Roman", serif'; x2.textAlign = 'center';
+                x2.fillText(SYMS[si], 128, 140);
+            }
+            var stex = new T.CanvasTexture(cvs); stex.minFilter = T.LinearFilter;
+            var ssp = new T.Sprite(kit.add(new T.SpriteMaterial({ map: stex, depthWrite: false, opacity: 0.85 })));
+            var sh2 = euler ? 2.1 : 2.4; ssp.scale.set(sh2 * cvs.width / 256, sh2, 1);
+            g.add(ssp);
+            var scc = new T.Color(SCOL[si]);
+            var str = fadeTrail(36, scc, scc, 0.6); g.add(str);
+            syms.push({ s: ssp, tr: str, ph: si / nSym * TAU, i: si, R: 13 + (si % 4) * 2.2 });
+        }
+        function updSymbols(dt) {
+            syms.forEach(function (S) {
+                var a = -t * 0.19 + S.ph;                 // opposite direction to the solids
+                var x = S.R * Math.sin(a) + 3 * Math.sin(a * 2.3 + S.i);
+                var z = 11 + 13 * Math.cos(a);             // nearest point ≈ 24 → swoops right past the camera
+                var y = 9 + 5 * Math.sin(a * 1.7 + S.i * 1.3) + 1.5 * Math.cos(t * 0.5 + S.i);
+                S.s.position.set(x, y, z);
+                S.s.material.rotation = 0.25 * Math.sin(t * 0.7 + S.i);
+                if (dt) pushTrail(S.tr, x, y, z);
+            });
         }
 
         function update(dt) {
@@ -1317,6 +1559,9 @@
             }
             wgeo.attributes.position.needsUpdate = true; wgeo.attributes.color.needsUpdate = true;
             srcBalls.forEach(function (sb) { sb.position.y = 0.35 + 0.2 * Math.sin(-w * t); });
+
+            /* math layer */
+            updUnit(); updFourier(); updLorenz(dt); updPhyllo(); updFlyers(dt); updSymbols(dt);
 
             /* formulas drift upward with a gentle sway */
             forms.forEach(function (fm) {
