@@ -121,6 +121,31 @@
         })));
     };
 
+    /* Spring-back offset for things the visitor grabs and throws */
+    function Spring(k, c) { this.o = new T.Vector3(); this.v = new T.Vector3(); this.held = false; this.k = k || 4; this.c = c || 1.5; }
+    Spring.prototype.step = function (dt) {
+        if (this.held || !dt) return;
+        this.v.addScaledVector(this.o, -this.k * dt).multiplyScalar(Math.exp(-this.c * dt));
+        this.o.addScaledVector(this.v, dt);
+    };
+    function springPick(sp, base, r, onRelease) {
+        return {
+            r: r, pos: function (out) { return out.copy(base).add(sp.o); },
+            grab: function () { sp.held = true; sp.v.set(0, 0, 0); },
+            drag: function (pt) { sp.o.copy(pt).sub(base); },
+            release: function (vel) { sp.held = false; sp.v.copy(vel).clampLength(0, 30); if (onRelease) onRelease(vel); }
+        };
+    }
+    function spinPick(center, r, S, k) {                  // drag sideways to spin, flick to keep it spinning
+        var last = new T.Vector3();
+        return {
+            r: r, pos: function (out) { return out.copy(center); },
+            grab: function (pt) { last.copy(pt); S.spin = 0; },
+            drag: function (pt) { S.rot += (pt.x - last.x) * (k || 0.3); last.copy(pt); },
+            release: function (vel) { S.spin = clamp(vel.x * (k || 0.3) * 0.5, -6, 6); }
+        };
+    }
+
     function edgesOf(geo) { return geo.userData.edges || (geo.userData.edges = new T.EdgesGeometry(geo, 25)); }
     function meshE(geo, mat, lineMat) {
         var m = new T.Mesh(geo, mat);
@@ -594,7 +619,8 @@
         var VEST = [kit.solid(0xff7a1a, 0.97, 0.6, 0.1), kit.solid(0xd9f99d, 0.97, 0.6, 0.1)];
         var HAT = [kit.solid(0xffffff, 0.97, 0.45, 0.2), kit.solid(0xfacc15, 0.97, 0.5, 0.2), kit.solid(0xff7a1a, 0.97, 0.5, 0.2)];
         function buildWorker(i, def) {
-            var Wk = { g: new T.Group(), legs: [], arms: [], ph: rand(0, TAU), d: def, seg: 0, u: 0, x: 0, z: 0, y: 0 };
+            var Wk = { g: new T.Group(), legs: [], arms: [], ph: rand(0, TAU), d: def, seg: 0, u: 0, x: 0, z: 0, y: 0,
+                base: new T.Vector3(), o: new T.Vector3(), ov: new T.Vector3(), held: false, land: 0 };
             [-0.11, 0.11].forEach(function (x) { var p = new T.Group(); p.position.set(x, 0.84, 0); p.add(new T.Mesh(wLegGeo, mPants)); Wk.g.add(p); Wk.legs.push(p); });
             var tor = new T.Mesh(wTorsoGeo, VEST[i % 2]); tor.position.y = 1.17; Wk.g.add(tor);
             [-0.31, 0.31].forEach(function (x) { var p = new T.Group(); p.position.set(x, 1.46, 0); p.add(new T.Mesh(wArmGeo, VEST[i % 2])); Wk.g.add(p); Wk.arms.push(p); });
@@ -639,6 +665,22 @@
                     if (d.work === 'top') { y = done >= MAXF ? ROOFY : done > 0 ? slabTop(done - 1) : 0; Wk.g.visible = true; }
                     Wk.g.position.set(d.x, y, d.z); Wk.g.rotation.y = d.face;
                 }
+                /* picked up by the visitor: dangle; dropped: fall, land, then walk back to work */
+                Wk.base.copy(Wk.g.position);
+                if (!Wk.held && (Wk.o.lengthSq() > 1e-4 || Wk.ov.lengthSq() > 1e-4)) {
+                    if (Wk.o.y > 0 || Wk.ov.y > 0) {
+                        Wk.ov.y -= 9.81 * dt; Wk.o.addScaledVector(Wk.ov, dt);
+                        if (Wk.o.y <= 0) { Wk.o.y = 0; Wk.ov.set(0, 0, 0); Wk.land = 1.0; }
+                    } else if ((Wk.land -= dt) <= 0) { Wk.o.multiplyScalar(Math.exp(-dt * 0.8)); walking = true; }
+                }
+                Wk.g.position.add(Wk.o);
+                if (Wk.held) {
+                    var sw = Math.sin(t * 14 + Wk.ph);
+                    Wk.legs[0].rotation.x = 0.5 * sw; Wk.legs[1].rotation.x = -0.5 * sw;
+                    Wk.arms[0].rotation.set(0, 0, -2.6); Wk.arms[1].rotation.set(0, 0, 2.6);
+                    return;
+                }
+                Wk.arms[0].rotation.z = 0;
                 Wk.ph += dt * (walking ? d.sp * 5.5 : 1);
                 var s = Math.sin(Wk.ph);
                 if (walking) {
@@ -792,7 +834,7 @@
                     if (V.stopX !== null && !V.served) {
                         var ds = (V.stopX - V.x) * V.dir;
                         if (ds > -0.5) target = Math.min(target, Math.sqrt(2 * 2.0 * Math.max(0, ds)));
-                        if (ds < 0.3 && V.v < 0.35) { V.st = 'stopped'; V.tm = 0; V.v = 0; V.x = V.stopX; }
+                        if (ds < 0.3 && V.v < 0.35 && !V.held) { V.st = 'stopped'; V.tm = 0; V.v = 0; V.x = V.stopX; }
                     }
                     var gap = 1e9;
                     vehicles.forEach(function (o) {
@@ -801,8 +843,8 @@
                     });
                     if (gap < 1e8) target = Math.min(target, Math.sqrt(2 * 2.0 * Math.max(0, gap - 2.5)));
                 }
-                V.v = Math.max(0, V.v + clamp(target - V.v, -4.5 * dt, 2.2 * dt));
-                V.x += V.v * V.dir * dt;
+                if (V.held) V.v = 0;
+                else { V.v = Math.max(0, V.v + clamp(target - V.v, -4.5 * dt, 2.2 * dt)); V.x += V.v * V.dir * dt; }
                 if (V.st === 'stopped') { V.tm += dt; if (releaseVeh(V)) { V.served = true; V.st = 'drive'; } }
                 if (V.x * V.dir > 58) { V.st = V.kind === 'fire' ? 'standby' : 'gone'; V.tm = 0; }
                 V.g.position.set(V.x, 0, LANE[V.lane]);
@@ -814,7 +856,9 @@
             });
         }
 
+        var siteDone = 0;
         function updSite(dt, done) {
+            siteDone = done;
             var info = stepBuilding(dt, done);
             stepVehicles(dt);
             stepFireTruck(fireT, dt, info);
@@ -867,6 +911,7 @@
                     break;
             }
             if (dt <= 0) return;
+            if (cr.held) { cr.wx = cr.wz = 0; return; }
             // Pivot (trolley) acceleration in polar coordinates → drives a 2-axis pendulum:
             //   s'' = −(g·sin s + a·cos s + 2·L'·s') / L − c·s'
             var ps = cr.psi, rr = cr.r;
@@ -982,6 +1027,7 @@
             trolley.position.x = -cr.r.x;
             var erx = -Math.cos(cr.psi.x), erz = Math.sin(cr.psi.x), etx = Math.sin(cr.psi.x), etz = Math.cos(cr.psi.x);
             var px2 = MX + cr.r.x * erx, pz2 = MZ + cr.r.x * erz, L = cr.L.x;
+            cr.piv = { x: px2, z: pz2 };
             var hx = px2 + L * Math.sin(cr.sx), hz = pz2 + L * Math.sin(cr.sz);
             var hy = PIVY - L * Math.sqrt(Math.max(0, 1 - Math.sin(cr.sx) * Math.sin(cr.sx) - Math.sin(cr.sz) * Math.sin(cr.sz)));
             var ra = ropes.geometry.attributes.position.array, o = 0.18;
@@ -1006,7 +1052,46 @@
             if (tick) craneLbl.set('TC-01 · ' + (cr.has ? '1.8' : '0.4') + ' t · R ' + cr.r.x.toFixed(1) + ' m · sway ' + (Math.hypot(cr.sx, cr.sz) * 180 / Math.PI).toFixed(1) + '°');
             updSite(dt, done);
         }
-        return { kit: kit, group: g, update: update };
+        /* --- things the visitor can grab / click --- */
+        var picks = [];
+        var _ho = new T.Vector3();
+        picks.push({                                          // crane hook / load: pull it and let it swing
+            r: 2.2, pos: function (out) { out.copy(hookG.position); if (cr.has) out.y -= SL + LH / 2; return out; },
+            grab: function () { cr.held = true; },
+            drag: function (pt) {
+                if (!cr.piv) return;
+                var L = cr.L.x + (cr.has ? SL + LH / 2 : 0);
+                cr.sx = Math.asin(clamp((pt.x - cr.piv.x) / L, -0.6, 0.6)); cr.sz = Math.asin(clamp((pt.z - cr.piv.z) / L, -0.6, 0.6));
+            },
+            release: function (vel) { cr.held = false; var L = cr.L.x + 1; cr.wx = clamp(vel.x / L, -1.2, 1.2); cr.wz = clamp(vel.z / L, -1.2, 1.2); }
+        });
+        workers.forEach(function (Wk) {
+            picks.push({
+                r: 1.1, enabled: function () { return Wk.g.visible; },
+                pos: function (out) { out.copy(Wk.g.position); out.y += 0.9; return out; },
+                grab: function () { Wk.held = true; Wk.ov.set(0, 0, 0); },
+                drag: function (pt) { Wk.o.copy(pt).sub(Wk.base); Wk.o.y -= 0.9; },
+                release: function (vel) { Wk.held = false; Wk.ov.copy(vel).clampLength(0, 12); Wk.land = 0; }
+            });
+        });
+        vehicles.forEach(function (V) {
+            picks.push({
+                r: 3.4, enabled: function () { return V.st !== 'standby' && V.st !== 'gone'; },
+                pos: function (out) { out.copy(V.g.position); out.y += 1.6; return out; },
+                grab: function () { V.held = true; },
+                drag: function (pt) { V.x = clamp(pt.x, -56, 56); },
+                release: function () { V.held = false; if (V.st === 'stopped' && V.stopX !== null && Math.abs(V.x - V.stopX) > 0.6) V.st = 'drive'; }
+            });
+        });
+        floors.forEach(function (fl, f) {                     // click a floor: lights on / off
+            picks.push({ r: 3.0, enabled: function () { return f < siteDone; },
+                pos: function (out) { return out.set(BX, f * FH + 1.5, FRONT); },
+                click: function () { fl.want = !fl.want; } });
+        });
+        picks.push({ r: 2.8, pos: function (out) { return out.set(PHX, 1.3, PHZ); },   // pump house: run a fire drill now
+            click: function () { if (drill.st === 'idle' && siteDone >= MAXF) drill.next = 0; } });
+        picks.push({ r: 2.2, pos: function (out) { return out.copy(fanPos); }, click: function () { fanW += 14; } });   // AHU fan boost
+        return { kit: kit, group: g, update: update, picks: picks };
     }
 
     /* ================================================================== */
@@ -1516,7 +1601,7 @@
 
         /* --- Drones --- */
         function buildDrone(scale, seed) {
-            var D = { g: new T.Group(), blades: [], seed: seed };
+            var D = { g: new T.Group(), blades: [], seed: seed, base: new T.Vector3(), sp: new Spring(3, 1.3) };
             D.g.scale.setScalar(scale);
             D.g.add(meshE(new T.BoxGeometry(0.9, 0.25, 0.9), kit.solid(0x111827, 0.96, 0.1), lCyan));
             [Math.PI / 4, -Math.PI / 4].forEach(function (r) { var arm = new T.Mesh(new T.BoxGeometry(2.1, 0.07, 0.1), kit.solid(COL.amber, 0.95, 0.3)); arm.rotation.y = r; D.g.add(arm); });
@@ -1580,7 +1665,7 @@
                 E.plat.position.y = E.y.x - 0.03;
             });
             /* stations */
-            arms.forEach(function (A) { stepArm(A, dt); poseArm(A); });
+            arms.forEach(function (A) { if (!A.manual) stepArm(A, dt); poseArm(A); });
             stepScrew(dt);
             stepLaser(dt);
             stepVision(dt);
@@ -1592,14 +1677,14 @@
                 var x = p.cx + p.ax * Math.sin(p.wx * t + ph), z = p.cz + p.az * Math.sin(p.wz * t + ph * 1.3);
                 var y = p.cy + 0.6 * Math.sin(0.7 * t + ph) + noise(t * 1.3, k * 5) * 0.12;
                 var ax = -p.ax * p.wx * p.wx * Math.sin(p.wx * t + ph), az = -p.az * p.wz * p.wz * Math.sin(p.wz * t + ph * 1.3);
-                D.g.position.set(x, y, z);
+                D.base.set(x, y, z); D.sp.step(dt); D.g.position.copy(D.base).add(D.sp.o);
                 D.g.rotation.set(Math.atan(az / 9.81) * 2.4 + noise(t * 2, k) * 0.02, 0.35 * Math.sin(t * 0.1 + k), -Math.atan(ax / 9.81) * 2.4, 'YXZ');
                 D.blades.forEach(function (bl) { bl.rotation.y += bl.userData.dir * 47 * dt; });
                 kit.op(D.strobe.material, ((t + D.seed) % 1.2) < 0.07 ? 1 : 0);
-                D.ring.position.set(x, 0.04, z);
+                D.ring.position.set(D.g.position.x, 0.04, D.g.position.z);
                 D.ring.scale.setScalar(0.6 + ((t * 0.8 + D.seed) % 1) * 0.9);
                 if (k === 0) {
-                    droneLbl.sprite.position.set(x, y + 1.6, z);
+                    droneLbl.sprite.position.set(D.g.position.x, D.g.position.y + 1.6, D.g.position.z);
                     if (tick) droneLbl.set('UAV-01 · ALT ' + y.toFixed(1) + ' m · BANK ' + Math.abs(Math.atan(ax / 9.81) * 2.4 * 57.3).toFixed(0) + '°');
                 }
             });
@@ -1613,7 +1698,23 @@
                 }
             });
         }
-        return { kit: kit, group: g, update: update };
+        /* --- grab a robot by its wrist and drive it yourself; it resumes its job when released --- */
+        var picks = [];
+        arms.forEach(function (A) {
+            picks.push({
+                r: 1.4, pos: function (out) { return out.set(A.tool.x, A.tool.y - 0.4, A.tool.z); },
+                grab: function () { A.manual = true; },
+                drag: function (pt) {
+                    var sx = A.bx, sz = BZ, dx = pt.x - sx, dy = Math.max(0.9, pt.y + 0.4) - SHY, dz = pt.z - sz;
+                    var d = Math.hypot(dx, dy, dz), k = d > L1 + L2 - 0.15 ? (L1 + L2 - 0.15) / d : 1;
+                    if (Math.hypot(dx, dz) < 0.4) dx = 0.4;
+                    A.tool.x = sx + dx * k; A.tool.y = SHY + dy * k; A.tool.z = sz + dz * k;
+                },
+                release: function () { A.manual = false; A.tool.vx = A.tool.vy = A.tool.vz = 0; if (CYL[A.st]) cylInit(A); }
+            });
+        });
+        drones.forEach(function (D, k) { picks.push(springPick(D.sp, D.base, k ? 1.5 : 2)); });
+        return { kit: kit, group: g, update: update, picks: picks };
     }
 
     /* ================================================================== */
@@ -1721,10 +1822,12 @@
             var spr = new T.Sprite(kit.add(new T.SpriteMaterial({ map: tex, depthWrite: false, opacity: 0.5 })));
             var hgt = rand(0.9, 1.7); spr.scale.set(hgt * 512 / 96, hgt, 1);
             spr.position.set(rand(-28, 28), rand(0, 24), rand(-18, 10)); g.add(spr);
-            forms.push({ s: spr, v: rand(0.35, 0.8), ph: rand(0, 6.28) });
+            forms.push({ s: spr, v: rand(0.35, 0.8), ph: rand(0, 6.28), b: spr.position.clone(), sp: new Spring(2.5, 1.2) });
         }
 
         /* ================= MATH LAYER ================= */
+        var penHeld = false, atomS = { rot: 0, spin: 0 }, lzS = { rot: 0, spin: 0 }, ucHeld = false, ucOff = 0, ucTheta = 0, phStart = 0;
+        var feBase = new T.Vector3(15, 4.2, 5), feSp = new Spring(3, 1.4);
         var lAxis = kit.line(COL.white, 0.25), lCyanM = kit.line(COL.cyan, 0.85);
         function setL(l, a, b, c, d, e, f) {
             var p = l.geometry.attributes.position.array; p[0] = a; p[1] = b; p[2] = c; p[3] = d; p[4] = e; p[5] = f;
@@ -1767,7 +1870,8 @@
         var ucLbl2 = new Label(kit, COL.violet, 0.55, 'left'); ucLbl2.sprite.position.set(WX0 + 1.2, UR + 0.95, 0); UC.add(ucLbl2.sprite);
         ucLbl2.set('e^(iθ) = cos θ + i·sin θ');
         function updUnit() {
-            var th = t * 0.8, cs = Math.cos(th), sn = Math.sin(th), px = UR * cs, py = UR * sn;
+            if (ucHeld) ucOff = ucTheta - t * 0.8;
+            var th = t * 0.8 + ucOff, cs = Math.cos(th), sn = Math.sin(th), px = UR * cs, py = UR * sn;
             setL(ucRad, 0, 0, 0, px, py, 0); setL(ucSin, px, 0, 0, px, py, 0); setL(ucCos, 0, 0, 0, px, 0, 0); setL(ucLink, px, py, 0, WX0, py, 0);
             var ap = ucArc.geometry.attributes.position.array, thm = ((th % TAU) + TAU) % TAU;
             for (var q = 0; q < 40; q++) { var a = thm * q / 39; ap[q * 3] = 0.6 * Math.cos(a); ap[q * 3 + 1] = 0.6 * Math.sin(a); ap[q * 3 + 2] = 0; }
@@ -1822,7 +1926,8 @@
             out[0] = x; out[1] = y;
         }
         var _e = [0, 0];
-        function updFourier() {
+        function updFourier(dt) {
+            feSp.step(dt); FE.position.copy(feBase).add(feSp.o);
             var tau = t * FW, cyc = Math.floor(tau / TAU), sh = SHAPES[cyc % 2], cs = sh.c;
             var ap = feArms.geometry.attributes.position.array, x = 0, y = 0;
             ap[0] = 0; ap[1] = 0; ap[2] = 0;
@@ -1863,7 +1968,7 @@
             lzAcc += dt * 0.55;                         // simulated seconds per real second
             while (lzAcc > LH) { lzAcc -= LH; lzStep(); pushTrail(lzTrail, lz[0], lz[2], lz[1]); }
             lzHead.position.set(lz[0], lz[2], lz[1]);
-            LZ.rotation.y = 0.35 * Math.sin(t * 0.07);
+            lzS.rot += dt * lzS.spin; lzS.spin *= Math.exp(-dt * 0.6); LZ.rotation.y = 0.35 * Math.sin(t * 0.07) + lzS.rot;
         }
 
         /* --- Phyllotaxis: sunflower seeds at the golden angle 137.5° --- */
@@ -1873,7 +1978,7 @@
         phLbl.set('GOLDEN ANGLE 137.5° · r = c·√n');
         var cAmber = new T.Color(COL.amber);
         function updPhyllo() {
-            var grow = (t * 40) % (NPH + 140);
+            var grow = ((t - phStart) * 40) % (NPH + 140);
             for (var n = 0; n < NPH; n++) {
                 if (n > grow) { PHY.hide(n); continue; }
                 var r = 0.17 * Math.sqrt(n), a = n * GOLD + t * 0.08, u = n / NPH;
@@ -1902,7 +2007,7 @@
             { geo: new T.OctahedronGeometry(1.2, 0), col: COL.amber, txt: 'OCTAHEDRON · V = (√2/3)a³' }
         ];
         var flyers = FLYDEF.map(function (d, i) {
-            var F = { g: new T.Group(), ph: i / FLYDEF.length * TAU, R: 22 + (i % 3) * 1.6, i: i };
+            var F = { g: new T.Group(), ph: i / FLYDEF.length * TAU, R: 22 + (i % 3) * 1.6, i: i, base: new T.Vector3(), sp: new Spring(3.5, 1.4), spin: 0 };
             F.g.add(new T.Mesh(d.geo, kit.glass(d.col, 0.1)));
             F.g.add(new T.LineSegments(d.wire ? new T.WireframeGeometry(d.geo) : edgesOf(d.geo), kit.line(d.col, d.wire ? 0.5 : 0.95, true)));
             F.g.add(glowSprite(kit, d.col, 3.2, 0.25));
@@ -1917,10 +2022,11 @@
                 var a = t * 0.12 + F.ph;
                 var x = F.R * Math.sin(a), z = 4 + 16 * Math.cos(a) + 2 * Math.sin(a * 3 + F.i);
                 var y = 8.5 + 4.5 * Math.sin(2 * a + F.i) + 1.2 * Math.sin(t * 0.6 + F.i);
-                F.g.position.set(x, y, z);
-                F.g.rotation.x += dt * (0.5 + 0.1 * F.i); F.g.rotation.y += dt * (0.8 - 0.07 * F.i);
-                F.lbl.sprite.position.set(x, y + 1.9, z);
-                if (dt) pushTrail(F.tr, x, y, z);
+                F.base.set(x, y, z); F.sp.step(dt); F.g.position.copy(F.base).add(F.sp.o);
+                var gp = F.g.position; F.spin *= Math.exp(-dt * 0.7);
+                F.g.rotation.x += dt * (0.5 + 0.1 * F.i + F.spin); F.g.rotation.y += dt * (0.8 - 0.07 * F.i + F.spin);
+                F.lbl.sprite.position.set(gp.x, gp.y + 1.9, gp.z);
+                if (dt) pushTrail(F.tr, gp.x, gp.y, gp.z);
             });
         }
 
@@ -1950,7 +2056,7 @@
             g.add(ssp);
             var scc = new T.Color(SCOL[si]);
             var str = fadeTrail(36, scc, scc, 0.6); g.add(str);
-            syms.push({ s: ssp, tr: str, ph: si / nSym * TAU, i: si, R: 13 + (si % 4) * 2.2 });
+            syms.push({ s: ssp, tr: str, ph: si / nSym * TAU, i: si, R: 13 + (si % 4) * 2.2, base: new T.Vector3(), sp: new Spring(3.5, 1.4), spin: 0, r: euler ? 2.6 : 1.5 });
         }
         function updSymbols(dt) {
             syms.forEach(function (S) {
@@ -1958,15 +2064,16 @@
                 var x = S.R * Math.sin(a) + 3 * Math.sin(a * 2.3 + S.i);
                 var z = 11 + 13 * Math.cos(a);             // nearest point ≈ 24 → swoops right past the camera
                 var y = 9 + 5 * Math.sin(a * 1.7 + S.i * 1.3) + 1.5 * Math.cos(t * 0.5 + S.i);
-                S.s.position.set(x, y, z);
-                S.s.material.rotation = 0.25 * Math.sin(t * 0.7 + S.i);
-                if (dt) pushTrail(S.tr, x, y, z);
+                S.base.set(x, y, z); S.sp.step(dt); S.s.position.copy(S.base).add(S.sp.o);
+                S.spin *= Math.exp(-dt * 0.8); S.rot = (S.rot || 0) + S.spin * dt;
+                S.s.material.rotation = 0.25 * Math.sin(t * 0.7 + S.i) + S.rot;
+                if (dt) pushTrail(S.tr, S.s.position.x, S.s.position.y, S.s.position.z);
             });
         }
 
         function update(dt) {
             /* pendulum */
-            if (dt) stepPend(dt);
+            if (dt && !penHeld) stepPend(dt);
             var sn = Math.sin(pen[0]);
             var bx = PV.x + PL * sn * Math.cos(pen[1]), by = PV.y - PL * Math.cos(pen[0]), bz = PV.z + PL * sn * Math.sin(pen[1]);
             bob.position.set(bx, by, bz); bobGlow.position.copy(bob.position);
@@ -2010,7 +2117,7 @@
             if (arrow.visible) { arrow.position.copy(ball.position); _d.copy(pj.v).divideScalar(vl); arrow.setDirection(_d); arrow.setLength(0.6 + vl * 0.28, 0.45, 0.28); }
 
             /* atom */
-            atom.rotation.y += dt * 0.18; atom.rotation.x = 0.25 * Math.sin(t * 0.13);
+            atomS.rot += dt * (0.18 + atomS.spin); atomS.spin *= Math.exp(-dt * 0.6); atom.rotation.y = atomS.rot; atom.rotation.x = 0.25 * Math.sin(t * 0.13);
             nuc.position.set(noise(t * 7) * 0.03, noise(t * 6, 2) * 0.03, 0);
             orbits.forEach(function (ob) {
                 var e = t * ob.sp + ob.ph, R = 3.2;
@@ -2038,17 +2145,61 @@
             srcBalls.forEach(function (sb) { sb.position.y = 0.35 + 0.2 * Math.sin(-w * t); });
 
             /* math layer */
-            updUnit(); updFourier(); updLorenz(dt); updPhyllo(); updFlyers(dt); updSymbols(dt);
+            updUnit(); updFourier(dt); updLorenz(dt); updPhyllo(); updFlyers(dt); updSymbols(dt);
 
             /* formulas drift upward with a gentle sway */
             forms.forEach(function (fm) {
-                fm.s.position.y += fm.v * dt;
-                fm.s.position.x += Math.sin(t * 0.3 + fm.ph) * 0.15 * dt;
-                if (fm.s.position.y > 26) fm.s.position.set(rand(-28, 28), -1, rand(-18, 10));
+                fm.b.y += fm.v * dt;
+                fm.b.x += Math.sin(t * 0.3 + fm.ph) * 0.15 * dt;
+                if (fm.b.y > 26 && !fm.sp.held) { fm.b.set(rand(-28, 28), -1, rand(-18, 10)); fm.sp.o.set(0, 0, 0); fm.sp.v.set(0, 0, 0); }
+                fm.sp.step(dt); fm.s.position.copy(fm.b).add(fm.sp.o);
                 kit.op(fm.s.material, 0.35 + 0.25 * Math.sin(t * 0.8 + fm.ph));
             });
         }
-        return { kit: kit, group: g, update: update };
+        /* --- things the visitor can grab, throw, spin or click --- */
+        var picks = [];
+        picks.push({                                          // pendulum bob: pull it out and let go
+            r: 1.3, pos: function (out) { return out.copy(bob.position); },
+            grab: function () { penHeld = true; },
+            drag: function (pt) {
+                var d = pt.clone().sub(PV); d.y = Math.min(d.y, PL * 0.2); d.normalize();
+                pen[0] = Math.acos(clamp(-d.y, -1, 1)); pen[1] = Math.atan2(d.z, d.x); pen[2] = pen[3] = 0;
+            },
+            release: function (vel) {
+                penHeld = false;
+                var th = pen[0], ph = pen[1], st = Math.sin(th), ct = Math.cos(th);
+                pen[2] = clamp((vel.x * ct * Math.cos(ph) + vel.y * st + vel.z * ct * Math.sin(ph)) / PL, -3, 3);
+                pen[3] = Math.abs(st) > 0.05 ? clamp((-vel.x * Math.sin(ph) + vel.z * Math.cos(ph)) / (PL * st), -3, 3) : 0;
+            }
+        });
+        picks.push({                                          // ball: pick it up and throw it
+            r: 1.0, pos: function (out) { return out.copy(ball.position); },
+            grab: function () { pj.st = 'held'; },
+            drag: function (pt) { pj.p.copy(pt); pj.p.y = Math.max(0, pt.y - 0.38); },
+            release: function (vel) { pj.v.copy(vel).clampLength(0, 22); pj.st = 'fly'; pj.tm = 0; }
+        });
+        picks.push(spinPick(atom.position, 3.6, atomS, 0.35));
+        picks.push(spinPick(new T.Vector3(17.5, 12.2 + 25 * 0.17, -13), 5, lzS, 0.25));
+        picks.push({                                          // unit circle: turn θ by hand
+            r: 0.9, pos: function (out) { return out.copy(ucDot.position).add(UC.position); },
+            grab: function () { ucHeld = true; ucTheta = t * 0.8 + ucOff; },
+            drag: function (pt) { var a = Math.atan2(pt.y - UC.position.y, pt.x - UC.position.x); ucTheta += wrapAngle(a, ucTheta % TAU) - ucTheta % TAU; },
+            release: function () { ucHeld = false; }
+        });
+        picks.push(springPick(feSp, feBase, 3.4));
+        srcBalls.forEach(function (sb, k) {                   // drag the wave sources → new interference pattern
+            picks.push({ r: 0.9, plane: 'ground', pos: function (out) { return out.copy(sb.position); },
+                grab: function () {}, release: function () {},
+                drag: function (pt) {
+                    SRC[k][0] = clamp(pt.x - wave.position.x, -14, 14); SRC[k][1] = clamp(pt.z - wave.position.z, -3.3, 3.3);
+                    sb.position.x = wave.position.x + SRC[k][0]; sb.position.z = wave.position.z + SRC[k][1];
+                } });
+        });
+        picks.push({ r: 3.2, pos: function (out) { return out.copy(PHY.obj.position); }, click: function () { phStart = t; } });
+        flyers.forEach(function (F) { picks.push(springPick(F.sp, F.base, 1.8, function (v) { F.spin = 4 + v.length() * 0.4; })); });
+        syms.forEach(function (S) { picks.push(springPick(S.sp, S.base, S.r, function (v) { S.spin = clamp(v.x * 0.4, -8, 8); })); });
+        forms.forEach(function (fm) { picks.push(springPick(fm.sp, fm.b, 1.4)); });
+        return { kit: kit, group: g, update: update, picks: picks };
     }
 
     /* ================================================================== */
@@ -2115,6 +2266,7 @@
             if (S.group.visible) S.update(dt);
         }
         if (trans.k >= 1) prev = null;
+        updateHover();
         var I = intensity().toFixed(3);
         if (canvas.style.opacity !== I) canvas.style.opacity = I;
         renderer.render(world, camera);
@@ -2152,12 +2304,140 @@
         else document.body.insertBefore(canvas, document.body.firstChild);
         resize();
         window.addEventListener('resize', resize);
+        bindPointer();
         if (!mobile) window.addEventListener('mousemove', function (ev) {
+            if (hold) return;                                  // keep the camera still while dragging
             pointer.tx = (ev.clientX / W - 0.5) * 2; pointer.ty = (ev.clientY / H - 0.5) * 2;
         }, { passive: true });
         canvas.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); cancelAnimationFrame(raf); }, false);
         frame(0.016);
         raf = requestAnimationFrame(loop);
+    }
+
+    /* ================================================================== */
+    /* Pointer play: grab, drag, throw and click things in the background  */
+    /* ================================================================== */
+    // A press only reaches the 3-D scene where the page has nothing of its own: no link, button, text or card.
+    var NOGRAB = 'a,button,input,textarea,select,label,summary,video,iframe,img,svg,[role="button"],[onclick],[contenteditable],[tabindex],.glass-nav,.quick-dock,.scene-chip,.cutout-frame,.bg-hint';
+    var ndc = new T.Vector2(), ray = new T.Raycaster(), dPlane = new T.Plane(), _pv = new T.Vector3(), _pq = new T.Vector3(), _cd = new T.Vector3();
+    var hold = null, hover = { x: 0, y: 0, dirty: false, on: false }, hintEl = null;
+    function grabbableAt(x, y) {
+        var el = document.elementFromPoint(x, y);
+        if (!el) return false;
+        if (el === canvas) return true;
+        for (var e = el; e && e.nodeType === 1 && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+            if (e.matches(NOGRAB)) return false;
+            var cs = getComputedStyle(e);
+            if ((cs.backdropFilter && cs.backdropFilter !== 'none') || (cs.webkitBackdropFilter && cs.webkitBackdropFilter !== 'none')) return false;
+            var m = /rgba?\(([^)]+)\)/.exec(cs.backgroundColor);
+            if (m) { var pa = m[1].split(','); if ((pa.length > 3 ? parseFloat(pa[3]) : 1) > 0.5) return false; }
+            if (e === el) for (var n = e.firstChild; n; n = n.nextSibling) if (n.nodeType === 3 && n.textContent.trim()) return false;
+        }
+        return true;
+    }
+    function pickAt(x, y) {
+        if (!renderer || trans.k < 1) return null;
+        var S = scenes[cur];
+        if (!S || !S.picks) return null;
+        var best = null, bestK = 1, tanH = Math.tan(camera.fov * Math.PI / 360);
+        for (var i = 0; i < S.picks.length; i++) {
+            var P = S.picks[i];
+            if (P.enabled && !P.enabled()) continue;
+            P.pos(_pv);
+            _pq.copy(_pv).project(camera);
+            if (_pq.z > 1 || _pq.z < -1) continue;
+            var sx = (_pq.x + 1) / 2 * W, sy = (1 - _pq.y) / 2 * H;
+            var rpx = Math.max(16, P.r / (_pv.distanceTo(camera.position) * tanH) * H / 2);
+            var k = Math.hypot(sx - x, sy - y) / rpx;
+            if (k < bestK) { bestK = k; best = P; }
+        }
+        return best;
+    }
+    function rayPoint(x, y, out) {
+        ndc.set(x / W * 2 - 1, -(y / H) * 2 + 1); ray.setFromCamera(ndc, camera);
+        return ray.ray.intersectPlane(dPlane, out);
+    }
+    function startHold(P, x, y) {
+        P.pos(_pv);
+        if (P.plane === 'ground') dPlane.setFromNormalAndCoplanarPoint(_cd.set(0, 1, 0), _pv);
+        else { camera.getWorldDirection(_cd); dPlane.setFromNormalAndCoplanarPoint(_cd.negate(), _pv); }
+        var now = performance.now();
+        hold = { P: P, x0: x, y0: y, moved: false, lt: now, last: _pv.clone(), pt: _pv.clone(), vel: new T.Vector3() };
+        if (P.drag && P.grab) P.grab(_pv.clone());
+        document.documentElement.classList.add('bg-grabbing');
+        hideHint();
+    }
+    function moveHold(x, y) {
+        if (!hold) return;
+        if (Math.hypot(x - hold.x0, y - hold.y0) > 6) hold.moved = true;
+        if (!hold.P.drag || !rayPoint(x, y, hold.pt)) return;
+        var now = performance.now(), dts = Math.max(0.004, (now - hold.lt) / 1000);
+        _pq.copy(hold.pt).sub(hold.last).divideScalar(dts);
+        hold.vel.lerp(_pq, 0.4);
+        hold.last.copy(hold.pt); hold.lt = now;
+        hold.P.drag(hold.pt.clone());
+    }
+    function endHold() {
+        if (!hold) return;
+        var P = hold.P;
+        if (performance.now() - hold.lt > 120) hold.vel.set(0, 0, 0);   // stopped before letting go → no throw
+        if (!hold.moved && P.click) P.click();
+        if (P.drag && P.release) P.release(hold.vel.clone().clampLength(0, 40));
+        hold = null;
+        document.documentElement.classList.remove('bg-grabbing');
+    }
+    function updateHover() {
+        if (!hover.dirty || hold) return;
+        hover.dirty = false;
+        var on = grabbableAt(hover.x, hover.y) && !!pickAt(hover.x, hover.y);
+        if (on !== hover.on) { hover.on = on; document.documentElement.classList.toggle('bg-can-grab', on); }
+    }
+    function showHint() {
+        try { if (localStorage.getItem('bgPlayHint')) return; localStorage.setItem('bgPlayHint', '1'); } catch (e) { /* storage blocked */ }
+        var lang = (document.documentElement.lang || 'en').slice(0, 2);
+        var txt = {
+            en: (mobile ? 'Touch & drag' : 'Drag, throw or click') + ' the 3-D objects in the background',
+            km: 'អូស បោះ ឬចុចលើវត្ថុ 3-D នៅផ្ទៃខាងក្រោយ',
+            zh: '拖动、抛掷或点击背景中的 3D 物体'
+        }[lang] || '';
+        if (!txt) return;
+        hintEl = document.createElement('div'); hintEl.className = 'bg-hint'; hintEl.setAttribute('role', 'status');
+        hintEl.textContent = '✋ ' + txt;
+        document.body.appendChild(hintEl);
+        requestAnimationFrame(function () { if (hintEl) hintEl.classList.add('show'); });
+        setTimeout(hideHint, 7000);
+    }
+    function hideHint() {
+        if (!hintEl) return;
+        var el = hintEl; hintEl = null; el.classList.remove('show');
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
+    }
+    function bindPointer() {
+        window.addEventListener('mousedown', function (ev) {
+            if (ev.button !== 0 || !grabbableAt(ev.clientX, ev.clientY)) return;
+            var P = pickAt(ev.clientX, ev.clientY);
+            if (!P) return;
+            ev.preventDefault(); startHold(P, ev.clientX, ev.clientY);
+        });
+        window.addEventListener('mousemove', function (ev) {
+            if (hold) { moveHold(ev.clientX, ev.clientY); return; }
+            hover.x = ev.clientX; hover.y = ev.clientY; hover.dirty = true;
+        }, { passive: true });
+        window.addEventListener('mouseup', endHold);
+        window.addEventListener('blur', endHold);
+        window.addEventListener('scroll', function () { hover.dirty = true; }, { passive: true });
+        window.addEventListener('touchstart', function (ev) {
+            if (ev.touches.length !== 1) { endHold(); return; }
+            var tc = ev.touches[0];
+            if (!grabbableAt(tc.clientX, tc.clientY)) return;
+            var P = pickAt(tc.clientX, tc.clientY);
+            if (!P) return;
+            ev.preventDefault(); startHold(P, tc.clientX, tc.clientY);      // only blocks scrolling when something was grabbed
+        }, { passive: false });
+        window.addEventListener('touchmove', function (ev) { if (!hold) return; ev.preventDefault(); moveHold(ev.touches[0].clientX, ev.touches[0].clientY); }, { passive: false });
+        window.addEventListener('touchend', endHold);
+        window.addEventListener('touchcancel', endHold);
+        setTimeout(showHint, 2500);
     }
 
     window.BgScenes = {

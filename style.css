@@ -3626,3 +3626,17 @@ body[data-scene="stem"] .kinetic-typography-layer { opacity: 0.55; transition: o
     .scene-chip:hover { transform: translateX(-50%); }
     .scene-live { display: none; }
 }
+
+/* ---------- Play with the 3-D background (scenes3d.js) ---------- */
+html.bg-can-grab, html.bg-can-grab body, html.bg-can-grab body * { cursor: grab !important; }
+html.bg-grabbing, html.bg-grabbing * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+.bg-hint {
+    position: fixed; left: 50%; bottom: 26px; z-index: 60; transform: translate(-50%, 16px);
+    padding: 9px 18px; border-radius: 30px; pointer-events: none;
+    background: rgba(10, 14, 24, 0.82); border: 1px solid rgba(0, 242, 254, 0.45);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    color: #e2e8f0; font-family: var(--font-tech, sans-serif); font-size: 0.85rem; letter-spacing: 0.02em;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 242, 254, 0.18);
+    opacity: 0; transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.bg-hint.show { opacity: 1; transform: translate(-50%, 0); }
